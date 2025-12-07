@@ -33,18 +33,42 @@ const UnlockedFeatures: React.FC<UnlockedFeaturesProps> = ({ levelInfo }) => {
     return emojis[plant] || '🌱';
   };
 
+  const getPlantName = (plant: string): string => {
+    const names: Record<string, string> = {
+      carrot: 'Морковь',
+      tomato: 'Помидор',
+      cucumber: 'Огурец',
+      strawberry: 'Клубника',
+      pumpkin: 'Тыква'
+    };
+    return names[plant] || plant;
+  };
+
+  const getFeatureName = (feature: string): string => {
+    const names: Record<string, string> = {
+      basic_planting: 'Посадка',
+      watering: 'Полив',
+      selling: 'Продажа',
+      fertilizer: 'Удобрения',
+      greenhouse_unlock: 'Теплица',
+      greenhouse_build: 'Строительство',
+      auto_watering: 'Автополив'
+    };
+    return names[feature] || feature;
+  };
+
   return (
-    <div className="bg-gray-800/50 rounded-xl p-4 mb-4">
-      <h3 className="text-lg font-bold text-white mb-3">Открытый контент</h3>
+    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 mb-4">
+      <h3 className="text-lg font-bold text-white mb-3">🎯 Открытый контент</h3>
 
       {unlocked_plants.length > 0 && (
         <div className="mb-4">
-          <h4 className="text-white/80 font-medium mb-2">Растения:</h4>
+          <h4 className="text-white/80 font-medium mb-2">🌱 Растения:</h4>
           <div className="flex flex-wrap gap-2">
             {unlocked_plants.map((plant, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 bg-green-900/30 text-green-300 px-3 py-2 rounded-lg"
+                className="flex items-center gap-2 bg-white/20 text-white px-3 py-2 rounded-lg"
               >
                 <span className="text-xl">{getPlantEmoji(plant)}</span>
                 <span className="font-medium">{getPlantName(plant)}</span>
@@ -56,47 +80,28 @@ const UnlockedFeatures: React.FC<UnlockedFeaturesProps> = ({ levelInfo }) => {
 
       {unlocked_features.length > 0 && (
         <div>
-          <h4 className="text-white/80 font-medium mb-2">Возможности:</h4>
+          <h4 className="text-white/80 font-medium mb-2">⚡ Возможности:</h4>
           <div className="grid grid-cols-2 gap-2">
             {unlocked_features.map((feature, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 bg-blue-900/30 text-blue-300 px-3 py-2 rounded-lg"
+                className="flex items-center gap-2 bg-white/10 text-white px-3 py-2 rounded-lg"
               >
                 <span className="text-xl">{getFeatureIcon(feature)}</span>
-                <span className="font-medium">{getFeatureName(feature)}</span>
+                <span className="font-medium text-sm">{getFeatureName(feature)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {unlocked_plants.length === 0 && unlocked_features.length === 0 && (
+        <div className="text-center py-4">
+          <p className="text-white/80">Пока ничего не открыто. Повышайте уровень!</p>
+        </div>
+      )}
     </div>
   );
-};
-
-// Вспомогательные функции
-const getPlantName = (plant: string): string => {
-  const names: Record<string, string> = {
-    carrot: 'Морковь',
-    tomato: 'Помидор',
-    cucumber: 'Огурец',
-    strawberry: 'Клубника',
-    pumpkin: 'Тыква'
-  };
-  return names[plant] || plant;
-};
-
-const getFeatureName = (feature: string): string => {
-  const names: Record<string, string> = {
-    basic_planting: 'Посадка',
-    watering: 'Полив',
-    selling: 'Продажа',
-    fertilizer: 'Удобрения',
-    greenhouse_unlock: 'Теплица',
-    greenhouse_build: 'Строительство',
-    auto_watering: 'Автополив'
-  };
-  return names[feature] || feature;
 };
 
 export default UnlockedFeatures;

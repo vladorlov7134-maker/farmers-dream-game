@@ -25,6 +25,32 @@ const SellModal: React.FC<SellModalProps> = ({
     harvest.reduce((acc, item) => ({ ...acc, [item.plantType]: 1 }), {})
   );
 
+  const getPlantInfo = (plantType: string): PlantInfo | undefined => {
+    return plantsInfo.find(p => p.type === plantType);
+  };
+
+  const getPlantName = (type: string) => {
+    const names: Record<string, string> = {
+      carrot: 'Морковь',
+      tomato: 'Помидор',
+      cucumber: 'Огурец',
+      strawberry: 'Клубника',
+      pumpkin: 'Тыква'
+    };
+    return names[type] || type;
+  };
+
+  const getPlantEmoji = (type: string) => {
+    const emojis: Record<string, string> = {
+      carrot: '🥕',
+      tomato: '🍅',
+      cucumber: '🥒',
+      strawberry: '🍓',
+      pumpkin: '🎃'
+    };
+    return emojis[type] || '🌾';
+  };
+
   const increaseQuantity = (plantType: string) => {
     const item = harvest.find(h => h.plantType === plantType);
     if (item) {
@@ -40,10 +66,6 @@ const SellModal: React.FC<SellModalProps> = ({
       ...prev,
       [plantType]: Math.max(1, (prev[plantType] || 1) - 1)
     }));
-  };
-
-  const getPlantInfo = (plantType: string): PlantInfo | undefined => {
-    return plantsInfo.find(p => p.type === plantType);
   };
 
   const calculateTotalPrice = () => {
@@ -106,16 +128,16 @@ const SellModal: React.FC<SellModalProps> = ({
                 const plantInfo = getPlantInfo(item.plantType);
                 const quantity = quantities[item.plantType] || 1;
                 const itemTotal = (plantInfo?.sell_price || 0) * quantity;
+                const plantName = getPlantName(item.plantType);
+                const plantEmoji = getPlantEmoji(item.plantType);
 
                 return (
                   <div key={item.plantType} className="border rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <span className="text-3xl">{plantInfo?.emoji || '🌾'}</span>
+                        <span className="text-3xl">{plantEmoji}</span>
                         <div>
-                          <h3 className="font-bold text-gray-800">
-                            {plantInfo?.name || item.plantType}
-                          </h3>
+                          <h3 className="font-bold text-gray-800">{plantName}</h3>
                           <div className="text-sm text-gray-600">
                             В наличии: {item.count} шт.
                           </div>

@@ -18,23 +18,24 @@ const ShopModal: React.FC<ShopModalProps> = ({
   onClose,
   unlockedPlants
 }) => {
-  const [selectedAmount, setSelectedAmount] = useState<Record<string, number>>({});
+  const [selectedAmounts, setSelectedAmounts] = useState<Record<string, number>>({});
 
   const handleBuy = (plantType: string) => {
-    const amount = selectedAmount[plantType] || 1;
+    const amount = selectedAmounts[plantType] || 1;
     onBuy(plantType, amount);
-    setSelectedAmount(prev => ({ ...prev, [plantType]: 1 }));
+    // Сбросить количество после покупки
+    setSelectedAmounts(prev => ({ ...prev, [plantType]: 1 }));
   };
 
   const increaseAmount = (plantType: string) => {
-    setSelectedAmount(prev => ({
+    setSelectedAmounts(prev => ({
       ...prev,
       [plantType]: (prev[plantType] || 1) + 1
     }));
   };
 
   const decreaseAmount = (plantType: string) => {
-    setSelectedAmount(prev => ({
+    setSelectedAmounts(prev => ({
       ...prev,
       [plantType]: Math.max(1, (prev[plantType] || 1) - 1)
     }));
@@ -50,6 +51,38 @@ const ShopModal: React.FC<ShopModalProps> = ({
     }
   };
 
+  const getRarityName = (rarity: string) => {
+    switch (rarity) {
+      case 'common': return 'Обычный';
+      case 'uncommon': return 'Необычный';
+      case 'rare': return 'Редкий';
+      case 'epic': return 'Эпический';
+      default: return 'Обычный';
+    }
+  };
+
+  const getPlantName = (type: string) => {
+    const names: Record<string, string> = {
+      carrot: 'Морковь',
+      tomato: 'Помидор',
+      cucumber: 'Огурец',
+      strawberry: 'Клубника',
+      pumpkin: 'Тыква'
+    };
+    return names[type] || type;
+  };
+
+  const getPlantEmoji = (type: string) => {
+    const emojis: Record<string, string> = {
+      carrot: '🥕',
+      tomato: '🍅',
+      cucumber: '🥒',
+      strawberry: '🍓',
+      pumpkin: '🎃'
+    };
+    return emojis[type] || '🌱';
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -59,7 +92,7 @@ const ShopModal: React.FC<ShopModalProps> = ({
             <div className="flex items-center gap-4 mt-2">
               <div className="flex items-center gap-2 bg-yellow-50 px-3 py-1 rounded-full">
                 <Coins className="h-4 w-4 text-yellow-600" />
-                <span className="font-bold text-yellow-700">{coins}</span>
+                <span className="font-bold text-yellow-700">{coins}🪙</span>
               </div>
             </div>
           </div>
@@ -75,9 +108,10 @@ const ShopModal: React.FC<ShopModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {plantsInfo.map((plant) => {
               const isUnlocked = unlockedPlants.includes(plant.type);
-              const amount = selectedAmount[plant.type] || 1;
+              const amount = selectedAmounts[plant.type] || 1;
               const totalPrice = plant.seed_price * amount;
               const canAfford = coins >= totalPrice;
+              const plantName = getPlantName(plant.type);
 
               return (
                 <div
@@ -92,13 +126,11 @@ const ShopModal: React.FC<ShopModalProps> = ({
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-3xl">{plant.emoji}</span>
+                          <span className="text-3xl">{getPlantEmoji(plant.type)}</span>
                           <div>
-                            <h3 className="font-bold text-gray-800">{plant.name}</h3>
+                            <h3 className="font-bold text-gray-800">{plantName}</h3>
                             <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(plant.rarity)}`}>
-                              {plant.rarity === 'common' ? 'Обычный' :
-                               plant.rarity === 'uncommon' ? 'Необычный' :
-                               plant.rarity === 'rare' ? 'Редкий' : 'Эпический'}
+                              {getRarityName(plant.rarity)}
                             </span>
                           </div>
                         </div>
@@ -111,7 +143,8 @@ const ShopModal: React.FC<ShopModalProps> = ({
                       </div>
 
                       <div className="text-sm text-gray-600 mb-4">
-                        Продажа: {plant.sell_price}🪙 за шт.
+                        <div>Продажа: {plant.sell_price}🪙 за шт.</div>
+                        <div>Время роста: {Math.floor(plant.growth_time / 60)} мин</div>
                       </div>
 
                       {!isUnlocked && (

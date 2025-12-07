@@ -1,6 +1,6 @@
 // frontend/src/utils/xpAnimations.ts
 export const showXpAnimation = (xpAmount: number, position: { x: number, y: number }) => {
-  // Создаем элемент для анимации XP
+  // Получаем координаты клика
   const xpElement = document.createElement('div');
   xpElement.className = 'fixed z-50 pointer-events-none';
   xpElement.style.left = `${position.x}px`;

@@ -1,4 +1,4 @@
-import { X, Carrot, Wheat, Potato } from 'lucide-react'
+import { X, Carrot, Wheat, Leaf } from 'lucide-react'
 
 interface PlantingModalProps {
   isOpen: boolean
@@ -32,7 +32,7 @@ const CROP_TYPES = [
   {
     id: 'potato',
     name: 'Картофель',
-    icon: Potato,
+    icon: Leaf,  // Используем Leaf вместо Potato
     price: 15,
     color: 'from-purple-400 to-purple-600',
     description: 'Баланс цены и дохода',

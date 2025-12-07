@@ -13,3 +13,57 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Анимации */
+@keyframes scale-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Эффекты для клеток */
+.tile-empty {
+  transition: all 0.2s;
+}
+
+.tile-empty:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(139, 69, 19, 0.3);
+}
+
+.tile-with-crop {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}

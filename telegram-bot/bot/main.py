@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -10,13 +11,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ====================== НАСТРОЙКИ ======================
 
-# ВАША ССЫЛКА НА ИГРУ (Vercel)
-GAME_URL = "https://farmers-dream-game-jrnmfganc-vladislavs-projects-509bdccb.vercel.app"
+# ====================== ЗАГРУЗКА .env ФАЙЛА ======================
 
-# Токен бота (замените на ваш!)
-BOT_TOKEN = "8531589914:AAEy033OSRtw98l12ttcxkWppT2soA-kCdQ"  # ⚠️ ЗАМЕНИТЕ ЭТО!
+def load_env():
+    """Загружаем переменные из .env файла"""
+    env_path = Path(__file__).parent.parent / '.env'
+
+    if env_path.exists():
+        logger.info(f"📂 Загружаем .env из {env_path}")
+        with open(env_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+    else:
+        logger.warning(f"⚠️ Файл .env не найден: {env_path}")
+        print(f"\n⚠️ ВНИМАНИЕ: Файл .env не найден!")
+        print(f"Создайте файл: {env_path}")
+        print("Содержимое файла .env:")
+        print("BOT_TOKEN=ваш_токен_бота")
+        print("GAME_URL=https://ваш-домен.onrender.com")
+        print("")
+
+
+# Загружаем переменные окружения
+load_env()
+
+# ====================== КОНФИГУРАЦИЯ ======================
+
+# Получаем настройки из переменных окружения
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+GAME_URL = os.getenv("GAME_URL", "https://farmers-dream-game.onrender.com")
 
 
 # ====================== КОМАНДЫ БОТА ======================
@@ -66,7 +93,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Команда /play - быстрый запуск игры"""
-    # Простая кнопка для быстрого запуска
     keyboard = [[InlineKeyboardButton(
         "🎮 НАЧАТЬ ИГРАТЬ",
         web_app=WebAppInfo(url=GAME_URL)
@@ -81,24 +107,6 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-async def game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Команда /game - альтернативная команда для игры"""
-    keyboard = [
-        [InlineKeyboardButton("🚜 Ферма", web_app=WebAppInfo(url=GAME_URL))],
-        [InlineKeyboardButton("🏪 Магазин семян", callback_data="shop_seeds")],
-        [InlineKeyboardButton("📈 Прогресс", callback_data="progress")]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text(
-        "🎮 *Игровое меню*\n\n"
-        "Выберите раздел:",
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
-    )
-
-
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Команда /help - помощь по игре"""
     help_text = """
@@ -107,7 +115,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 *Основные команды:*
 /start - Главное меню
 /play - Быстрый запуск игры
-/game - Игровое меню
 /help - Эта справка
 
 *Как играть:*
@@ -182,17 +189,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await help_command(update, context)
 
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик ошибок"""
-    logger.error(f"Ошибка: {context.error}")
-
-    if update and update.effective_message:
-        await update.effective_message.reply_text(
-            "😕 Произошла ошибка. Попробуйте еще раз или напишите /start",
-            parse_mode="Markdown"
-        )
-
-
 # ====================== ЗАПУСК БОТА ======================
 
 def main() -> None:
@@ -201,21 +197,28 @@ def main() -> None:
     print("🤖 ЗАПУСК FARMERS DREAM TELEGRAM BOT")
     print("=" * 60)
     print(f"🎮 Ссылка на игру: {GAME_URL}")
-    print(
-        f"🔑 Токен бота: {'*' * 10}{BOT_TOKEN[-10:] if BOT_TOKEN and BOT_TOKEN != 'ВАШ_ТОКЕН_БОТА' else 'НЕ УСТАНОВЛЕН'}")
     print("=" * 60)
 
     # Проверка токена
-    if not BOT_TOKEN or BOT_TOKEN == "ВАШ_ТОКЕН_БОТА":
-        print("\n❌ КРИТИЧЕСКАЯ ОШИБКА!")
-        print("Токен бота не установлен!")
+    if not BOT_TOKEN:
+        print("\n❌ ОШИБКА: Токен бота не найден!")
+        print("Создайте файл .env в папке telegram-bot/")
+        print("Содержимое файла .env:")
+        print("BOT_TOKEN=ваш_токен_бота")
+        print("GAME_URL=https://ваш-домен.onrender.com")
         print("\nКак получить токен:")
         print("1. Откройте Telegram, найдите @BotFather")
         print("2. Напишите /newbot и следуйте инструкциям")
-        print("3. Скопируйте токен (выглядит как: 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz)")
-        print("4. Замените 'ВАШ_ТОКЕН_БОТА' в коде на ваш токен")
+        print("3. Скопируйте токен (пример: 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz)")
         print("=" * 60)
         return
+
+    print(f"✅ Токен найден (первые 10 символов): {BOT_TOKEN[:10]}...")
+    print("\n📋 Команды бота:")
+    print("/start - Главное меню с кнопкой игры")
+    print("/play - Быстрый запуск игры")
+    print("/help - Помощь по игре")
+    print("=" * 60)
 
     try:
         # Создаем приложение
@@ -224,21 +227,17 @@ def main() -> None:
         # Регистрируем обработчики команд
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("play", play))
-        application.add_handler(CommandHandler("game", game))
         application.add_handler(CommandHandler("help", help_command))
 
         # Регистрируем обработчик кнопок
         application.add_handler(CallbackQueryHandler(button_callback))
-
-        # Регистрируем обработчик ошибок
-        application.add_error_handler(error_handler)
 
         print("\n✅ Бот успешно запущен!")
         print("\n📱 Инструкция по использованию:")
         print("1. Найдите своего бота в Telegram")
         print("2. Напишите команду /start")
         print("3. Нажмите кнопку '🚜 ОТКРЫТЬ ФЕРМУ'")
-        print("4. Игра должна открыться прямо в Telegram!")
+        print("4. Игра откроется прямо в Telegram!")
         print("\n🔧 Для выхода нажмите Ctrl+C")
         print("=" * 60)
 

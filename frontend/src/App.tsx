@@ -10,7 +10,7 @@ import ShopModal from './components/Shop/ShopModal';
 import SellModal from './components/Sell/SellModal';
 import { useLevelSystem } from './hooks/useLevelSystem';
 import { useGame } from './hooks/useGame';
-import { GameState, PlantInfo } from './types/game.types';
+import { PlantInfo } from './types/game.types';
 import { API_BASE } from './config';
 import { showXpAnimation } from './utils/xpAnimations';
 
@@ -154,10 +154,10 @@ function App() {
     }
   };
 
-  // Обработчик полива
-  const handleWaterPlant = async (position: { x: number, y: number }) => {
+  // Обработчик полива - ИСПРАВЛЕН ТИП
+  const handleWaterPlant = async (x: number, y: number) => {
     try {
-      const result = await apiWaterPlant(position.x, position.y);
+      const result = await apiWaterPlant(x, y);
 
       if (result.success) {
         showNotification('Растение полито!', 'success');
@@ -166,7 +166,7 @@ function App() {
         await addXP(2, 'watering');
 
         // Показываем анимацию XP
-        showXpAnimation(2, position);
+        showXpAnimation(2, { x, y });
 
         // Обновляем состояние
         await fetchGameState();
@@ -276,12 +276,12 @@ function App() {
     let wateredCount = 0;
     for (const cell of gameState.farm) {
       if (cell.plant && !cell.is_watered) {
-        await handleWaterPlant({ x: cell.x, y: cell.y });
+        await handleWaterPlant(cell.x, cell.y);
         wateredCount++;
         await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
-    
+
     if (wateredCount === 0) {
       showNotification('Все растения уже политы', 'info');
     } else {
@@ -290,14 +290,14 @@ function App() {
   };
 
   // Фильтрация доступных семян
-  const availableSeeds = gameState?.inventory.seeds 
+  const availableSeeds = gameState?.inventory.seeds
     ? Object.entries(gameState.inventory.seeds)
         .filter(([plantType, count]) => count > 0 && isPlantUnlocked(plantType))
         .map(([plantType, count]) => ({ plantType, count }))
     : [];
 
   // Фильтрация урожая
-  const availableHarvest = gameState?.inventory.harvest 
+  const availableHarvest = gameState?.inventory.harvest
     ? Object.entries(gameState.inventory.harvest)
         .filter(([_, count]) => count > 0)
         .map(([plantType, count]) => ({ plantType, count }))
@@ -353,7 +353,7 @@ function App() {
                 <p className="text-green-600">Выращивай, собирай, развивайся!</p>
               </div>
             </div>
-            
+
             {/* Баланс */}
             {gameState && (
               <div className="flex flex-wrap gap-3">
@@ -366,7 +366,7 @@ function App() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-gradient-to-r from-blue-100 to-cyan-50 border-2 border-blue-300 rounded-xl px-4 py-3 flex items-center gap-2 min-w-[140px]">
                   <Gem className="h-5 w-5 text-blue-600" />
                   <div>
@@ -384,12 +384,12 @@ function App() {
         {/* Система уровней */}
         {levelInfo && (
           <div className="mb-6">
-            <LevelProgress 
+            <LevelProgress
               levelInfo={levelInfo}
               onToggle={() => setExpandedLevel(!expandedLevel)}
               expanded={expandedLevel}
             />
-            
+
             {expandedLevel && (
               <UnlockedFeatures levelInfo={levelInfo} />
             )}
@@ -398,7 +398,7 @@ function App() {
 
         {/* Модальное окно повышения уровня */}
         {levelUpData && (
-          <LevelUpModal 
+          <LevelUpModal
             levelData={levelUpData}
             onClose={closeLevelUpModal}
           />
@@ -414,7 +414,7 @@ function App() {
             unlockedPlants={levelInfo?.unlocked_plants || []}
           />
         )}
-        
+
         {showSell && (
           <SellModal
             harvest={availableHarvest}
@@ -437,7 +437,7 @@ function App() {
                   </h2>
                   <p className="text-green-600 mt-1">5x5 клеток для выращивания растений</p>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setShowShop(true)}
@@ -446,14 +446,14 @@ function App() {
                     <Coins className="h-4 w-4" />
                     Купить семена
                   </button>
-                  
+
                   <button
                     onClick={() => setShowSell(true)}
                     className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
                   >
                     💰 Продать урожай
                   </button>
-                  
+
                   <button
                     onClick={handleUpdateGame}
                     className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-opacity"
@@ -462,7 +462,7 @@ function App() {
                   </button>
                 </div>
               </div>
-              
+
               {/* Игровое поле */}
               {gameState ? (
                 <SimpleFarmGrid
@@ -477,10 +477,10 @@ function App() {
                   <p className="text-green-700">Ферма загружается...</p>
                 </div>
               )}
-              
+
               <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
                 <p className="text-green-700 text-sm">
-                  💡 <strong>Совет:</strong> Нажмите на пустую клетку, чтобы посадить выбранное семя. 
+                  💡 <strong>Совет:</strong> Нажмите на пустую клетку, чтобы посадить выбранное семя.
                   Собирайте урожай вовремя, чтобы получить больше XP!
                 </p>
               </div>
@@ -494,7 +494,7 @@ function App() {
               <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
                 🌱 Выбрано для посадки
               </h3>
-              
+
               {selectedSeed ? (
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-300">
                   <div className="flex items-center gap-3">
@@ -533,13 +533,13 @@ function App() {
                   {availableSeeds.length} видов
                 </span>
               </div>
-              
+
               {availableSeeds.length > 0 ? (
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
                   {availableSeeds.map(({ plantType, count }) => {
                     const plantInfo = getPlantInfo(plantType);
                     const unlocked = isPlantUnlocked(plantType);
-                    
+
                     return (
                       <motion.div
                         key={plantType}
@@ -566,7 +566,7 @@ function App() {
                               </div>
                             </div>
                           </div>
-                          
+
                           {!unlocked ? (
                             <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
                               🔒 Уровень {plantInfo?.required_level || '?'}
@@ -601,11 +601,11 @@ function App() {
                 <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
                   📦 Урожай
                 </h3>
-                
+
                 <div className="space-y-3">
                   {availableHarvest.map(({ plantType, count }) => {
                     const plantInfo = getPlantInfo(plantType);
-                    
+
                     return (
                       <div
                         key={plantType}
@@ -624,7 +624,7 @@ function App() {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="text-yellow-700 font-bold">
                           {count * (plantInfo?.sell_price || 0)}🪙
                         </div>
@@ -640,7 +640,7 @@ function App() {
               <h3 className="text-xl font-bold text-purple-800 mb-4 flex items-center gap-2">
                 ⚡ Быстрые действия
               </h3>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   onClick={handleWaterAll}
@@ -649,7 +649,7 @@ function App() {
                 >
                   💦 Полить все
                 </button>
-                
+
                 <button
                   onClick={handleAddTestXP}
                   className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
@@ -658,7 +658,7 @@ function App() {
                   +100 XP (тест)
                 </button>
               </div>
-              
+
               <div className="mt-4 p-3 bg-purple-100/50 rounded-xl">
                 <p className="text-purple-700 text-sm">
                   💎 <strong>Совет:</strong> Выполняйте действия регулярно, чтобы быстрее повышать уровень и открывать новые возможности!
@@ -677,21 +677,21 @@ function App() {
               </div>
               <div className="text-sm text-green-600">Растений</div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-2xl font-bold text-green-700">
                 {levelInfo?.current_level || 1}
               </div>
               <div className="text-sm text-green-600">Уровень</div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-2xl font-bold text-green-700">
                 {levelInfo?.total_xp || 0}
               </div>
               <div className="text-sm text-green-600">Всего XP</div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-2xl font-bold text-green-700">
                 {availableHarvest.reduce((sum, h) => sum + h.count, 0)}
@@ -699,7 +699,7 @@ function App() {
               <div className="text-sm text-green-600">Урожая</div>
             </div>
           </div>
-          
+
           <div className="text-center mt-6 text-green-600 text-sm">
             <p>Farmers Dream © 2024 • Система уровней активна!</p>
           </div>

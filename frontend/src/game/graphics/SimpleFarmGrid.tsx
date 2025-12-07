@@ -6,7 +6,7 @@ interface SimpleFarmGridProps {
   farm: FarmCell[];
   onPlant: (position: { x: number; y: number }) => void;
   onHarvest: (plantId: string, position: { x: number; y: number }) => void;
-  onWater: (x: number, y: number) => void;
+  onWater: (x: number, y: number) => void; // Изменен тип
   selectedSeed: string | null;
 }
 
@@ -31,7 +31,7 @@ const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
 
   const handleWaterClick = (e: React.MouseEvent, x: number, y: number) => {
     e.stopPropagation();
-    onWater(x, y);
+    onWater(x, y); // Просто передаем координаты
   };
 
   const getCellBackground = (cell: FarmCell) => {

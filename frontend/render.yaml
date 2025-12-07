@@ -1,0 +1,9 @@
+# Render Configuration
+static:
+  - name: farmers-dream-game
+    buildCommand: cd frontend && npm install && npm run build
+    publishDirectory: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

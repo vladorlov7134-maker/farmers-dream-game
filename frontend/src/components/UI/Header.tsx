@@ -1,20 +1,9 @@
-import { useEffect, useState } from 'react'
 import { Coins, User, TrendingUp } from 'lucide-react'
 
 export const Header = () => {
-  const [isTelegram, setIsTelegram] = useState(false)
-  const [userName, setUserName] = useState('Игрок')
-
-  useEffect(() => {
-    if (window.Telegram?.WebApp) {
-      setIsTelegram(true)
-      const tg = window.Telegram.WebApp
-      const user = tg.initDataUnsafe?.user
-      if (user?.first_name) {
-        setUserName(user.first_name)
-      }
-    }
-  }, [])
+  // Проверяем Telegram без useState чтобы избежать ошибок
+  const isTelegramApp = typeof window !== 'undefined' && window.Telegram?.WebApp !== undefined
+  const telegramUser = isTelegramApp ? window.Telegram?.WebApp.initDataUnsafe?.user : null
 
   return (
     <header className="bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-2xl p-4 md:p-6 shadow-xl mb-6">
@@ -25,7 +14,9 @@ export const Header = () => {
             Farmers Dream
             <span className="ml-3 text-yellow-300">🚜</span>
           </h1>
-          <p className="opacity-90">Фермерская игра прямо в Telegram</p>
+          <p className="opacity-90">
+            {isTelegramApp ? 'Фермерская игра прямо в Telegram!' : 'Фермерская игра'}
+          </p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-3 md:gap-4">
@@ -48,9 +39,13 @@ export const Header = () => {
           <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl min-w-[120px]">
             <div className="flex items-center justify-center mb-1">
               <User className="w-5 h-5 mr-2" />
-              <div className="text-lg font-bold truncate max-w-[80px]">{userName}</div>
+              <div className="text-lg font-bold truncate max-w-[80px]">
+                {telegramUser?.first_name || 'Игрок'}
+              </div>
             </div>
-            <div className="text-xs opacity-80 text-center">Игрок</div>
+            <div className="text-xs opacity-80 text-center">
+              {telegramUser?.username ? `@${telegramUser.username}` : 'Игрок'}
+            </div>
           </div>
         </div>
       </div>

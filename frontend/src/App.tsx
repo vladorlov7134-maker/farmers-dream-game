@@ -4,44 +4,48 @@ import { FarmGrid } from './game/graphics/FarmGrid'
 import { StatsPanel } from './components/UI/StatsPanel'
 import { ActionBar } from './components/UI/ActionBar'
 
+// Проверяем запущено ли в Telegram
+const isTelegram = () => {
+  return typeof window !== 'undefined' && window.Telegram?.WebApp !== undefined
+}
+
 function App() {
-  const [isTelegram, setIsTelegram] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
+  const [telegramData, setTelegramData] = useState<any>(null)
+  const [isTelegramApp, setIsTelegramApp] = useState(false)
 
   useEffect(() => {
-    // Проверяем, запущено ли в Telegram WebApp
-    if (window.Telegram?.WebApp) {
-      setIsTelegram(true)
-      const tg = window.Telegram.WebApp
+    // Проверяем запущено ли в Telegram WebApp
+    const tg = window.Telegram?.WebApp
+    if (tg) {
+      setIsTelegramApp(true)
       tg.expand() // Развернуть на весь экран
       tg.enableClosingConfirmation() // Подтверждение закрытия
-      setUserData(tg.initDataUnsafe?.user)
+      setTelegramData({
+        user: tg.initDataUnsafe?.user,
+        theme: tg.themeParams
+      })
 
-      // Устанавливаем тему
+      // Устанавливаем фон из темы Telegram
       document.documentElement.style.backgroundColor = tg.themeParams.bg_color || '#f0f0f0'
-
-      console.log('Telegram WebApp initialized:', tg.initDataUnsafe)
-    } else {
-      console.log('Running in browser mode')
     }
   }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-blue-50 p-4 pb-24">
-      {/* Telegram User Info */}
-      {isTelegram && userData && (
-        <div className="bg-gradient-to-r from-telegram-500 to-telegram-600 text-white p-3 rounded-xl mb-4 shadow-lg">
+      {/* Показываем информацию о Telegram если запущено в WebApp */}
+      {isTelegramApp && telegramData?.user && (
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 rounded-xl mb-4 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
                 <span className="text-xl">
-                  {userData.first_name?.[0] || '👨‍🌾'}
+                  {telegramData.user.first_name?.[0] || '👨‍🌾'}
                 </span>
               </div>
               <div>
-                <div className="font-bold">{userData.first_name || 'Игрок'}</div>
+                <div className="font-bold">{telegramData.user.first_name}</div>
                 <div className="text-xs opacity-80">
-                  {userData.username ? `@${userData.username}` : 'ID: ' + userData.id}
+                  {telegramData.user.username ? `@${telegramData.user.username}` : `ID: ${telegramData.user.id}`}
                 </div>
               </div>
             </div>
@@ -65,13 +69,22 @@ function App() {
               🏪 Быстрая покупка
             </h3>
             <div className="space-y-3">
-              <button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white p-3 rounded-lg font-bold hover:from-orange-600 hover:to-orange-700 transition-all">
+              <button
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white p-3 rounded-lg font-bold hover:from-orange-600 hover:to-orange-700 transition-all"
+                onClick={() => alert('Куплена морковь!')}
+              >
                 🥕 Морковь - 10 💰
               </button>
-              <button className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-3 rounded-lg font-bold hover:from-yellow-600 hover:to-yellow-700 transition-all">
+              <button
+                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-3 rounded-lg font-bold hover:from-yellow-600 hover:to-yellow-700 transition-all"
+                onClick={() => alert('Куплена пшеница!')}
+              >
                 🌾 Пшеница - 20 💰
               </button>
-              <button className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white p-3 rounded-lg font-bold hover:from-purple-600 hover:to-purple-700 transition-all">
+              <button
+                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white p-3 rounded-lg font-bold hover:from-purple-600 hover:to-purple-700 transition-all"
+                onClick={() => alert('Куплен картофель!')}
+              >
                 🥔 Картофель - 15 💰
               </button>
             </div>
@@ -82,7 +95,7 @@ function App() {
         <div className="flex-1">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-green-100">
             <h2 className="text-2xl font-bold mb-6 text-green-800 text-center">
-              🌱 Ваша ферма - 5x5 клеток
+              {isTelegramApp ? '🌱 Ваша ферма в Telegram!' : '🌱 Ваша ферма'}
             </h2>
             <FarmGrid />
 
@@ -106,12 +119,15 @@ function App() {
       <div className="mt-8 text-center text-gray-600 text-sm">
         <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 inline-block">
           <p className="font-bold">Farmers Dream v1.0 🚜</p>
-          <p>Backend: <span className="text-green-600 font-bold">✓ Работает</span></p>
-          <p>Frontend: <span className="text-green-600 font-bold">✓ Работает</span></p>
-          {!isTelegram && (
-            <p className="mt-2 text-orange-600 font-bold">
-              ⚡ Для полного опыта откройте через Telegram бота!
-            </p>
+          {isTelegramApp ? (
+            <p className="text-green-600 font-bold">✅ Запущено в Telegram WebApp!</p>
+          ) : (
+            <>
+              <p>Для лучшего опыта откройте через Telegram бота!</p>
+              <p className="mt-2 text-orange-600 font-bold">
+                ⚡ Найдите бота в Telegram и нажмите /start
+              </p>
+            </>
           )}
         </div>
       </div>

@@ -19,27 +19,3 @@ export const showXpAnimation = (xpAmount: number, position: { x: number, y: numb
     document.body.removeChild(xpElement);
   }, 1000);
 };
-
-// Добавить в Tailwind конфиг
-// frontend/tailwind.config.js
-module.exports = {
-  theme: {
-    extend: {
-      animation: {
-        'xpFloat': 'xpFloat 1s ease-out forwards',
-      },
-      keyframes: {
-        xpFloat: {
-          '0%': {
-            opacity: 1,
-            transform: 'translateY(0) scale(1)'
-          },
-          '100%': {
-            opacity: 0,
-            transform: 'translateY(-50px) scale(1.2)'
-          },
-        }
-      }
-    }
-  }
-}

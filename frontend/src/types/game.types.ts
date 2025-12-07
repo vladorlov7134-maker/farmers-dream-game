@@ -18,8 +18,31 @@ export interface LevelUpData {
   xp_added: number;
 }
 
+export interface FarmCell {
+  x: number;
+  y: number;
+  is_watered: boolean;
+  has_fertilizer: boolean;
+  plant: {
+    id: string;
+    type: string;
+    stage: string;
+    emoji: string;
+    progress: number;
+    time_to_next_stage: number;
+    can_harvest: boolean;
+    planted_at: number;
+  } | null;
+}
+
 export interface GameState {
-  // Существующие поля...
+  player: {
+    id: number;
+    telegram_id: number;
+    username: string;
+    coins: number;
+    diamonds: number;
+  };
   level: LevelInfo;
   inventory: {
     coins: number;
@@ -27,6 +50,9 @@ export interface GameState {
     seeds: Record<string, number>;
     harvest: Record<string, number>;
   };
+  farm: FarmCell[];
+  farm_size: number;
+  game_time: number;
 }
 
 export interface PlantInfo {

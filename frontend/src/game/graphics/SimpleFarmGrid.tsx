@@ -1,261 +1,153 @@
-import { useState } from 'react'
-import { PlantingModal } from '../../components/UI/PlantingModal'
+// frontend/src/game/graphics/SimpleFarmGrid.tsx
+import React from 'react';
+import { FarmCell } from '../../types/game.types';
 
-interface Tile {
-  x: number
-  y: number
-  hasCrop: boolean
-  cropType: string | null
-  growthStage: number
-  isReady: boolean
+interface SimpleFarmGridProps {
+  farm: FarmCell[];
+  onPlant: (position: { x: number; y: number }) => void;
+  onHarvest: (plantId: string, position: { x: number; y: number }) => void;
+  onWater: (x: number, y: number) => void;
+  selectedSeed: string | null;
 }
 
-const CROP_COLORS: Record<string, string> = {
-  carrot: 'bg-orange-500',
-  wheat: 'bg-yellow-500',
-  potato: 'bg-purple-500'
-}
-
-const CROP_NAMES: Record<string, string> = {
-  carrot: '🥕 Морковь',
-  wheat: '🌾 Пшеница',
-  potato: '🥔 Картофель'
-}
-
-export const SimpleFarmGrid = () => {
-  const [tiles, setTiles] = useState<Tile[]>(() => {
-    // Создаем начальную сетку 5x5
-    const initialTiles: Tile[] = []
-    for (let x = 0; x < 5; x++) {
-      for (let y = 0; y < 5; y++) {
-        initialTiles.push({
-          x,
-          y,
-          hasCrop: false,
-          cropType: null,
-          growthStage: 1,
-          isReady: false
-        })
-      }
-    }
-    return initialTiles
-  })
-
-  const [selectedTile, setSelectedTile] = useState<{x: number, y: number} | null>(null)
-  const [showPlantModal, setShowPlantModal] = useState(false)
-  const [balance, setBalance] = useState(100)
-  const [notifications, setNotifications] = useState<string[]>([])
-
-  // Обработчик клика по клетке
-  const handleTileClick = (x: number, y: number) => {
-    const tile = tiles.find(t => t.x === x && t.y === y)
-    if (!tile) return
-
-    if (tile.hasCrop) {
-      // Клик по растению - сбор урожая
-      if (tile.isReady) {
-        harvestCrop(x, y)
-      } else {
-        addNotification(`🌱 ${CROP_NAMES[tile.cropType || 'carrot']} еще растет...`)
+const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
+  farm,
+  onPlant,
+  onHarvest,
+  onWater,
+  selectedSeed
+}) => {
+  const handleCellClick = (cell: FarmCell) => {
+    if (cell.plant) {
+      if (cell.plant.can_harvest) {
+        onHarvest(cell.plant.id, { x: cell.x, y: cell.y });
       }
     } else {
-      // Клик по пустой клетке - посадка
-      setSelectedTile({ x, y })
-      setShowPlantModal(true)
+      if (selectedSeed) {
+        onPlant({ x: cell.x, y: cell.y });
+      }
     }
-  }
+  };
 
-  // Посадка растения
-  const plantCrop = (cropType: string) => {
-    if (!selectedTile) return
+  const handleWaterClick = (e: React.MouseEvent, x: number, y: number) => {
+    e.stopPropagation();
+    onWater(x, y);
+  };
 
-    const cropPrice = {
-      carrot: 10,
-      wheat: 20,
-      potato: 15
-    }[cropType] || 10
-
-    // Проверяем баланс
-    if (balance < cropPrice) {
-      addNotification(`❌ Недостаточно средств! Нужно ${cropPrice} 💰`)
-      return
+  const getCellBackground = (cell: FarmCell) => {
+    if (cell.plant) {
+      if (cell.plant.can_harvest) {
+        return 'bg-gradient-to-br from-yellow-100 to-yellow-300';
+      } else if (cell.is_watered) {
+        return 'bg-gradient-to-br from-blue-100 to-emerald-100';
+      } else {
+        return 'bg-gradient-to-br from-emerald-50 to-green-100';
+      }
     }
+    return 'bg-gradient-to-br from-amber-50 to-orange-50';
+  };
 
-    // Обновляем баланс
-    setBalance(prev => prev - cropPrice)
-
-    // Обновляем клетку
-    setTiles(prev => prev.map(tile =>
-      tile.x === selectedTile.x && tile.y === selectedTile.y
-        ? {
-            ...tile,
-            hasCrop: true,
-            cropType,
-            growthStage: 1,
-            isReady: false
-          }
-        : tile
-    ))
-
-    addNotification(`✅ Посажена ${CROP_NAMES[cropType]} за ${cropPrice} 💰`)
-
-    // Таймер роста (5 секунд для теста)
-    setTimeout(() => {
-      setTiles(prev => prev.map(tile =>
-        tile.x === selectedTile.x && tile.y === selectedTile.y
-          ? { ...tile, isReady: true }
-          : tile
-      ))
-      addNotification(`🎉 ${CROP_NAMES[cropType]} готова к сбору!`)
-    }, 5000)
-  }
-
-  // Сбор урожая
-  const harvestCrop = (x: number, y: number) => {
-    const tile = tiles.find(t => t.x === x && t.y === y)
-    if (!tile) return
-
-    const reward = {
-      carrot: 30,
-      wheat: 50,
-      potato: 40
-    }[tile.cropType || 'carrot'] || 30
-
-    // Обновляем баланс
-    setBalance(prev => prev + reward)
-
-    // Очищаем клетку
-    setTiles(prev => prev.map(t =>
-      t.x === x && t.y === y
-        ? {
-            ...t,
-            hasCrop: false,
-            cropType: null,
-            growthStage: 1,
-            isReady: false
-          }
-        : t
-    ))
-
-    addNotification(`💰 Собран урожай ${CROP_NAMES[tile.cropType || 'carrot']}! +${reward} монет`)
-  }
-
-  // Добавление уведомления
-  const addNotification = (message: string) => {
-    setNotifications(prev => [message, ...prev.slice(0, 3)])
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(m => m !== message))
-    }, 3000)
-  }
+  const getPlantStageText = (progress: number) => {
+    if (progress < 0.1) return 'Семя';
+    if (progress < 0.3) return 'Росток';
+    if (progress < 0.7) return 'Растет';
+    if (progress < 0.9) return 'Созревает';
+    return 'Готово';
+  };
 
   return (
-    <div className="relative">
-      {/* Игровое поле */}
-      <div className="relative bg-gradient-to-b from-sky-100 to-emerald-50 p-6 rounded-2xl border-2 border-farm-brown">
-        <h3 className="text-xl font-bold text-center mb-6 text-green-800">
-          🌱 Ваша ферма (5x5)
-        </h3>
-
-        {/* Сетка клеток */}
-        <div className="grid grid-cols-5 gap-4 max-w-2xl mx-auto">
-          {tiles.map((tile) => (
-            <button
-              key={`${tile.x}-${tile.y}`}
-              onClick={() => handleTileClick(tile.x, tile.y)}
-              className={`
-                relative aspect-square rounded-lg transition-all duration-200
-                ${tile.hasCrop
-                  ? tile.isReady
-                    ? 'ring-4 ring-green-500 shadow-lg transform scale-105'
-                    : 'ring-2 ring-gray-300'
-                  : 'bg-farm-brown hover:bg-farm-soil hover:scale-105 hover:shadow-lg'
-                }
-              `}
-            >
-              {/* Координаты клетки */}
-              <div className="absolute top-1 left-1 text-xs text-white/70">
-                {tile.x},{tile.y}
-              </div>
-
-              {/* Растение */}
-              {tile.hasCrop && tile.cropType && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className={`
-                    w-3/4 h-3/4 rounded-full flex items-center justify-center
-                    ${CROP_COLORS[tile.cropType]}
-                    ${tile.isReady ? 'animate-pulse' : ''}
-                  `}>
-                    <span className="text-2xl">
-                      {tile.cropType === 'carrot' ? '🥕' :
-                       tile.cropType === 'wheat' ? '🌾' : '🥔'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Плюсик для пустой клетки */}
-              {!tile.hasCrop && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-3xl text-white/30">+</div>
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Легенда */}
-        <div className="mt-8 flex justify-center gap-4 text-sm">
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-farm-brown rounded mr-2"></div>
-            <span>Пустая клетка</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-orange-500 rounded-full mr-2"></div>
-            <span>Растение</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-green-500 ring-4 ring-green-300 rounded-full mr-2"></div>
-            <span>Готово к сбору</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Уведомления */}
-      <div className="mt-4 space-y-2">
-        {notifications.map((msg, index) => (
+    <div className="w-full">
+      <div className="grid grid-cols-5 gap-2 md:gap-3">
+        {farm.map((cell) => (
           <div
-            key={index}
-            className="bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg animate-slide-in border-l-4 border-green-500"
+            key={`${cell.x}-${cell.y}`}
+            className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center relative transition-all duration-300 cursor-pointer hover:scale-105 ${
+              cell.plant 
+                ? cell.plant.can_harvest 
+                  ? 'border-yellow-400 shadow-lg' 
+                  : 'border-green-300'
+                : selectedSeed 
+                  ? 'border-dashed border-blue-300 hover:border-blue-500' 
+                  : 'border-amber-200'
+            } ${getCellBackground(cell)}`}
+            onClick={() => handleCellClick(cell)}
           >
-            {msg}
+            {/* Верхний индикатор - эмодзи растения */}
+            <div className="text-3xl md:text-4xl">
+              {cell.plant ? cell.plant.emoji : '🌱'}
+            </div>
+
+            {/* Индикаторы состояния */}
+            <div className="absolute top-1 right-1 flex flex-col gap-1">
+              {cell.is_watered && (
+                <span className="text-blue-500 text-xs">💧</span>
+              )}
+              {cell.has_fertilizer && (
+                <span className="text-green-500 text-xs">✨</span>
+              )}
+            </div>
+
+            {/* Прогресс роста */}
+            {cell.plant && (
+              <>
+                <div className="absolute bottom-8 left-2 right-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500"
+                    style={{ width: `${cell.plant.progress * 100}%` }}
+                  />
+                </div>
+                <div className="absolute bottom-2 text-xs font-medium">
+                  {getPlantStageText(cell.plant.progress)}
+                </div>
+              </>
+            )}
+
+            {/* Кнопки действий */}
+            {cell.plant && !cell.plant.can_harvest && !cell.is_watered && (
+              <button
+                onClick={(e) => handleWaterClick(e, cell.x, cell.y)}
+                className="absolute bottom-1 right-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                💦 Полить
+              </button>
+            )}
+
+            {!cell.plant && selectedSeed && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl opacity-0 hover:opacity-100 transition-opacity">
+                <div className="text-white text-sm font-bold">Посадить</div>
+              </div>
+            )}
+
+            {cell.plant?.can_harvest && (
+              <div className="absolute inset-0 flex items-center justify-center bg-yellow-500/20 rounded-xl animate-pulse">
+                <div className="text-yellow-800 text-sm font-bold">⚡ Собрать!</div>
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Информация о балансе */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="font-bold text-lg">💰 Ваш баланс</div>
-            <div className="text-3xl font-bold text-green-700">{balance} монет</div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-600">Свободных клеток:</div>
-            <div className="text-2xl font-bold">
-              {tiles.filter(t => !t.hasCrop).length} из 25
-            </div>
-          </div>
+      {/* Легенда */}
+      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded"></div>
+          <span>Пустая клетка</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-gradient-to-br from-emerald-50 to-green-100 border border-green-300 rounded"></div>
+          <span>Растет</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-gradient-to-br from-blue-100 to-emerald-100 border border-green-300 rounded"></div>
+          <span>Полито</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-gradient-to-br from-yellow-100 to-yellow-300 border border-yellow-400 rounded"></div>
+          <span>Готово к сбору</span>
         </div>
       </div>
-
-      {/* Модальное окно посадки */}
-      <PlantingModal
-        isOpen={showPlantModal}
-        onClose={() => setShowPlantModal(false)}
-        onPlant={plantCrop}
-        position={selectedTile}
-        balance={balance}
-      />
     </div>
-  )
-}
+  );
+};
+
+export default SimpleFarmGrid;

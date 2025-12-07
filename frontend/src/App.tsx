@@ -1,7 +1,7 @@
 // frontend/src/App.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gamepad2, Coins, Gem, Sprout, Trophy, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { Gamepad2, Coins, Gem, Sprout, Star } from 'lucide-react';
 import SimpleFarmGrid from './game/graphics/SimpleFarmGrid';
 import LevelProgress from './components/LevelSystem/LevelProgress';
 import LevelUpModal from './components/LevelSystem/LevelUpModal';
@@ -10,7 +10,7 @@ import ShopModal from './components/Shop/ShopModal';
 import SellModal from './components/Sell/SellModal';
 import { useLevelSystem } from './hooks/useLevelSystem';
 import { useGame } from './hooks/useGame';
-import { GameState, PlantInfo, LevelInfo } from './types/game.types';
+import { GameState, PlantInfo } from './types/game.types';
 import { API_BASE } from './config';
 import { showXpAnimation } from './utils/xpAnimations';
 
@@ -32,27 +32,26 @@ const PLANT_NAMES: Record<string, string> = {
 };
 
 function App() {
-  const [gameState, setGameState] = useState<GameState | null>(null);
   const [plantsInfo, setPlantsInfo] = useState<PlantInfo[]>([]);
   const [selectedSeed, setSelectedSeed] = useState<string | null>(null);
   const [expandedLevel, setExpandedLevel] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showSell, setShowSell] = useState(false);
   const [notifications, setNotifications] = useState<Array<{id: number, message: string, type: 'success' | 'error' | 'info'}>>([]);
-  
+
   // Инициализация хуков
   const playerId = 1; // В реальном приложении получать из Telegram WebApp
-  const { 
-    levelInfo, 
-    levelUpData, 
-    fetchLevelInfo, 
-    addXP, 
-    closeLevelUpModal 
+  const {
+    levelInfo,
+    levelUpData,
+    fetchLevelInfo,
+    addXP,
+    closeLevelUpModal
   } = useLevelSystem(playerId);
-  
-  const { 
-    loading: gameLoading, 
-    error: gameError,
+
+  const {
+    loading: gameLoading,
+    gameState,
     fetchGameState,
     plantSeed: apiPlantSeed,
     harvestPlant: apiHarvestPlant,
@@ -68,9 +67,9 @@ function App() {
       await fetchLevelInfo();
       await fetchPlantsInfo();
     };
-    
+
     loadInitialData();
-    
+
     // Автообновление каждые 30 секунд
     const interval = setInterval(fetchGameState, 30000);
     return () => clearInterval(interval);
@@ -79,7 +78,7 @@ function App() {
   // Загрузка информации о растениях
   const fetchPlantsInfo = async () => {
     try {
-      const response = await fetch(`${API_BASE}/plants_info`);
+      const response = await fetch(`${API_BASE}/api/plants_info`);
       if (response.ok) {
         const data = await response.json();
         setPlantsInfo(data.plants || []);
@@ -93,7 +92,7 @@ function App() {
   const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setNotifications(prev => [...prev, { id, message, type }]);
-    
+
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
@@ -108,17 +107,17 @@ function App() {
 
     try {
       const result = await apiPlantSeed(selectedSeed, position);
-      
+
       if (result.success) {
         showNotification(`Посажено: ${PLANT_NAMES[selectedSeed] || selectedSeed}`, 'success');
-        
+
         // Добавляем XP за посадку
         const xpAmount = getXpForAction('planting', selectedSeed);
-        const xpResult = await addXP(xpAmount, 'planting');
-        
+        await addXP(xpAmount, 'planting');
+
         // Показываем анимацию XP
         showXpAnimation(xpAmount, position);
-        
+
         // Обновляем состояние
         await fetchGameState();
         setSelectedSeed(null);
@@ -134,17 +133,17 @@ function App() {
   const handleHarvestPlant = async (plantId: string, position: { x: number, y: number }) => {
     try {
       const result = await apiHarvestPlant(plantId);
-      
+
       if (result.success) {
         showNotification(`Собрано ${result.yield_count} урожая!`, 'success');
-        
+
         // Добавляем XP за сбор
         const xpAmount = getXpForAction('harvesting', result.plant_type);
-        const xpResult = await addXP(xpAmount, 'harvesting');
-        
+        await addXP(xpAmount, 'harvesting');
+
         // Показываем анимацию XP
         showXpAnimation(xpAmount, position);
-        
+
         // Обновляем состояние
         await fetchGameState();
       } else {
@@ -159,16 +158,16 @@ function App() {
   const handleWaterPlant = async (position: { x: number, y: number }) => {
     try {
       const result = await apiWaterPlant(position.x, position.y);
-      
+
       if (result.success) {
         showNotification('Растение полито!', 'success');
-        
+
         // Добавляем XP за полив
-        const xpResult = await addXP(2, 'watering');
-        
+        await addXP(2, 'watering');
+
         // Показываем анимацию XP
         showXpAnimation(2, position);
-        
+
         // Обновляем состояние
         await fetchGameState();
       } else {
@@ -183,7 +182,7 @@ function App() {
   const handleBuySeed = async (plantType: string, amount: number) => {
     try {
       const result = await apiBuySeed(plantType, amount);
-      
+
       if (result.success) {
         showNotification(`Куплено ${amount} семян за ${result.total_price}🪙`, 'success');
         await fetchGameState();
@@ -199,14 +198,14 @@ function App() {
   const handleSellHarvest = async (plantType: string, amount: number) => {
     try {
       const result = await apiSellHarvest(plantType, amount);
-      
+
       if (result.success) {
         showNotification(`Продано ${amount} урожая за ${result.total_price}🪙`, 'success');
-        
+
         // Добавляем XP за продажу
         const xpAmount = getXpForAction('selling', plantType) * amount;
-        const xpResult = await addXP(xpAmount, 'selling');
-        
+        await addXP(xpAmount, 'selling');
+
         await fetchGameState();
       } else {
         showNotification(result.error || 'Ошибка продажи', 'error');
@@ -241,7 +240,7 @@ function App() {
         pumpkin: 10
       }
     };
-    
+
     return xpValues[action]?.[plantType] || 5;
   };
 
@@ -273,13 +272,13 @@ function App() {
   // Полить все растения
   const handleWaterAll = async () => {
     if (!gameState?.farm) return;
-    
+
     let wateredCount = 0;
     for (const cell of gameState.farm) {
       if (cell.plant && !cell.is_watered) {
         await handleWaterPlant({ x: cell.x, y: cell.y });
         wateredCount++;
-        await new Promise(resolve => setTimeout(resolve, 300)); // Задержка для анимаций
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
     

@@ -12,7 +12,7 @@ export const useLevelSystem = (playerId: number) => {
   const fetchLevelInfo = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/levels/info/${playerId}`);
+      const response = await fetch(`${API_BASE}/api/levels/info/${playerId}`);
       if (!response.ok) throw new Error('Failed to fetch level info');
 
       const data = await response.json();
@@ -27,7 +27,7 @@ export const useLevelSystem = (playerId: number) => {
 
   const addXP = useCallback(async (amount: number, actionType?: string) => {
     try {
-      const response = await fetch(`${API_BASE}/levels/add-xp/${playerId}`, {
+      const response = await fetch(`${API_BASE}/api/levels/add-xp/${playerId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, action_type: actionType })

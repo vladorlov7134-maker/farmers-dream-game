@@ -1,3 +1,4 @@
+// frontend/tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -6,26 +7,43 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        'telegram': {
-          50: '#E3F2FD',
-          100: '#BBDEFB',
-          200: '#90CAF9',
-          300: '#64B5F6',
-          400: '#42A5F5',
-          500: '#3390EC',
-          600: '#1E88E5',
-          700: '#1976D2',
-          800: '#1565C0',
-          900: '#0D47A1',
-        },
-        'farm': {
-          'green': '#4CAF50',
-          'brown': '#8B4513',
-          'soil': '#A0522D',
-          'gold': '#FFD700'
-        }
+      animation: {
+        'xpFloat': 'xpFloat 1s ease-out forwards',
+        'slideDown': 'slideDown 0.3s ease',
+        'popIn': 'popIn 0.3s ease',
       },
+      keyframes: {
+        xpFloat: {
+          '0%': {
+            opacity: 1,
+            transform: 'translateY(0) scale(1)'
+          },
+          '100%': {
+            opacity: 0,
+            transform: 'translateY(-50px) scale(1.2)'
+          },
+        },
+        slideDown: {
+          'from': {
+            opacity: 0,
+            transform: 'translateY(-10px)'
+          },
+          'to': {
+            opacity: 1,
+            transform: 'translateY(0)'
+          }
+        },
+        popIn: {
+          '0%': {
+            opacity: 0,
+            transform: 'scale(0.8)'
+          },
+          '100%': {
+            opacity: 1,
+            transform: 'scale(1)'
+          }
+        }
+      }
     },
   },
   plugins: [],

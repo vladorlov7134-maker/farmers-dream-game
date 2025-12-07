@@ -1,63 +1,43 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-*.log
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Node
+# Общий .gitignore в корне проекта
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-dist/
-build/
-*.tgz
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Environment
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-
-# Database
-*.db
-*.sqlite3
-
-# OS
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Vercel
-.vercel/
-
-# Frontend specific
-frontend/dist/
-frontend/node_modules/
-
-# Backend specific
-backend/__pycache__/
-backend/*.db
-
-# Telegram bot
-telegram-bot/__pycache__/
+dist/
+dist-ssr/
+*.local
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.sqlite3
+*.db

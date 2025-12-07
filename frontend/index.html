@@ -2,13 +2,35 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Farmers Dream - Фермерская игра в Telegram</title>
+    <meta name="description" content="Farmers Dream - Telegram игра с фермой">
+    <meta name="theme-color" content="#4ade80">
+    <title>Farmers Dream 🌱</title>
+
+    <!-- Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Render.com analytics -->
+    <script>
+      // Analytics for Render
+      if (window.location.hostname.includes('render.com')) {
+        window.addEventListener('load', function() {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('https://farmers-dream-game.onrender.com/api/analytics/pageview', JSON.stringify({
+              path: window.location.pathname,
+              referrer: document.referrer,
+              timestamp: Date.now()
+            }));
+          }
+        });
+      }
+    </script>
   </body>
 </html>

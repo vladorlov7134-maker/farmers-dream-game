@@ -4,11 +4,6 @@ import { FarmGrid } from './game/graphics/FarmGrid'
 import { StatsPanel } from './components/UI/StatsPanel'
 import { ActionBar } from './components/UI/ActionBar'
 
-// Проверяем запущено ли в Telegram
-const isTelegram = () => {
-  return typeof window !== 'undefined' && window.Telegram?.WebApp !== undefined
-}
-
 function App() {
   const [telegramData, setTelegramData] = useState<any>(null)
   const [isTelegramApp, setIsTelegramApp] = useState(false)

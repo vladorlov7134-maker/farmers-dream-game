@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: farmers-dream-game
+    env: python
+    pythonVersion: 3.11
+    buildCommand: |
+      pip install -r requirements.txt
+      npm install
+      npm run build
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true

@@ -31,5 +31,7 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "typescript": "^5.2.2",
     "vite": "^5.0.0"
+    "scripts": {
+    "build": "tsc && vite build --outDir dist"
   }
 }

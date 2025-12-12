@@ -12,8 +12,7 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "axios": "^1.6.0",           ← ОБРАТИТЕ ВНИМАНИЕ НА ЗАПЯТЫЕ!
-    "tailwindcss": "^3.3.0"      ← ЗДЕСЬ ЗАПЯТОЙ НЕТ!
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

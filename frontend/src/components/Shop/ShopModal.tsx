@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlantInfo } from '../../types/game.types';
 import { Coins } from 'lucide-react';
 
@@ -18,6 +18,33 @@ const ShopModal: React.FC<ShopModalProps> = ({
   unlockedPlants
 }) => {
   const [selectedAmounts, setSelectedAmounts] = useState<Record<string, number>>({});
+
+  // Отладочный вывод
+  useEffect(() => {
+    console.log('=== SHOP MODAL DEBUG ===');
+    console.log('plantsInfo:', plantsInfo);
+    console.log('plantsInfo length:', plantsInfo?.length);
+    console.log('plantsInfo is array?', Array.isArray(plantsInfo));
+    console.log('unlockedPlants:', unlockedPlants);
+    console.log('coins:', coins);
+
+    if (Array.isArray(plantsInfo)) {
+      console.log('Plant types:', plantsInfo.map(p => p?.type).filter(Boolean));
+    }
+  }, [plantsInfo, unlockedPlants, coins]);
+
+  // Фильтруем валидные растения
+  const validPlants = Array.isArray(plantsInfo)
+    ? plantsInfo.filter(plant => {
+        const isValid = plant && plant.type && typeof plant.seed_price === 'number';
+        if (!isValid) {
+          console.log('Invalid plant filtered:', plant);
+        }
+        return isValid;
+      })
+    : [];
+
+  console.log('validPlants count:', validPlants.length);
 
   const handleBuy = (plantType: string) => {
     const amount = selectedAmounts[plantType] || 1;
@@ -83,6 +110,26 @@ const ShopModal: React.FC<ShopModalProps> = ({
     return emojis[type] || '🌱';
   };
 
+  // Если растений нет, показываем тестовые
+  const displayPlants = validPlants.length > 0 ? validPlants : [
+    {
+      type: 'carrot',
+      seed_price: 10,
+      sell_price: 15,
+      growth_time: 300,
+      required_level: 1,
+      rarity: 'common'
+    },
+    {
+      type: 'tomato',
+      seed_price: 20,
+      sell_price: 30,
+      growth_time: 600,
+      required_level: 2,
+      rarity: 'uncommon'
+    }
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -93,6 +140,9 @@ const ShopModal: React.FC<ShopModalProps> = ({
               <div className="flex items-center gap-2 bg-yellow-50 px-3 py-1 rounded-full">
                 <Coins className="h-4 w-4 text-yellow-600" />
                 <span className="font-bold text-yellow-700">{coins}🪙</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                Растений: {displayPlants.length}
               </div>
             </div>
           </div>
@@ -105,60 +155,56 @@ const ShopModal: React.FC<ShopModalProps> = ({
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[70vh]">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.isArray(plantsInfo) && plantsInfo.length > 0 ? (
-              plantsInfo.map((plant) => {
-                const isUnlocked = Array.isArray(unlockedPlants) && unlockedPlants.includes(plant.type);
-                const amount = selectedAmounts[plant.type] || 1;
-                const totalPrice = plant.seed_price * amount;
-                const canAfford = coins >= totalPrice;
-                const plantName = getPlantName(plant.type);
-                const plantEmoji = getPlantEmoji(plant.type);
+          {displayPlants.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {displayPlants.map((plant, index) => {
+                  // Все растения разблокированы для тестирования
+                  const isUnlocked = true;
+                  const amount = selectedAmounts[plant.type] || 1;
+                  const totalPrice = (plant.seed_price || 0) * amount;
+                  const canAfford = coins >= totalPrice;
+                  const plantName = getPlantName(plant.type);
+                  const plantEmoji = getPlantEmoji(plant.type);
+                  const requiredLevel = plant.required_level || 1;
 
-                return (
-                  <div
-                    key={plant.id || plant.type} // Используем plant.id, если есть, иначе plant.type
-                    className={`border rounded-xl p-4 transition-all ${
-                      isUnlocked
-                        ? 'hover:border-green-400 hover:shadow-lg'
-                        : 'opacity-60'
-                    } ${!isUnlocked ? 'cursor-not-allowed' : ''}`}
-                  >
-                    <div className="flex flex-col h-full">
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-3xl">{plantEmoji}</span>
-                            <div>
-                              <h3 className="font-bold text-gray-800">{plantName}</h3>
-                              <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(plant.rarity)}`}>
-                                {getRarityName(plant.rarity)}
+                  return (
+                    <div
+                      key={`${plant.type}-${index}`}
+                      className="border rounded-xl p-4 hover:border-green-400 hover:shadow-lg transition-all"
+                    >
+                      <div className="flex flex-col h-full">
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl">{plantEmoji}</span>
+                              <div>
+                                <h3 className="font-bold text-gray-800">{plantName}</h3>
+                                <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(plant.rarity)}`}>
+                                  {getRarityName(plant.rarity)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-green-600">
+                                {plant.seed_price}🪙
+                              </div>
+                              <div className="text-xs text-gray-500">за 1 шт.</div>
+                            </div>
+                          </div>
+
+                          <div className="text-sm text-gray-600 mb-4">
+                            <div>Продажа: {plant.sell_price}🪙 за шт.</div>
+                            <div>Время роста: {Math.floor((plant.growth_time || 300) / 60)} мин</div>
+                            <div>Требуется уровень: {requiredLevel}</div>
+                            <div className="mt-1">
+                              <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
+                                ✅ Доступно для покупки
                               </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-green-600">
-                              {plant.seed_price}🪙
-                            </div>
-                            <div className="text-xs text-gray-500">за 1 шт.</div>
-                          </div>
                         </div>
 
-                        <div className="text-sm text-gray-600 mb-4">
-                          <div>Продажа: {plant.sell_price}🪙 за шт.</div>
-                          <div>Время роста: {Math.floor(plant.growth_time / 60)} мин</div>
-                        </div>
-
-                        {!isUnlocked && (
-                          <div className="mb-3 p-2 bg-yellow-50 rounded-lg">
-                            <p className="text-xs text-yellow-700 text-center">
-                              🔒 Откроется на {plant.required_level} уровне
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {isUnlocked && (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div className="text-sm text-gray-600">Количество:</div>
@@ -198,15 +244,35 @@ const ShopModal: React.FC<ShopModalProps> = ({
                             {canAfford ? `Купить ${amount} шт.` : 'Недостаточно монет'}
                           </button>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p key="no-plants">Нет доступных растений</p>
-            )}
-          </div>
+                  );
+                })}
+              </div>
+
+              {/* Отладочная информация */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-bold text-gray-700 mb-2">🔧 Информация для отладки:</h4>
+                <div className="text-sm text-gray-600 space-y-2">
+                  <div><strong>Статус данных:</strong> {validPlants.length > 0 ? 'Данные получены с API' : 'Используются тестовые данные'}</div>
+                  <div><strong>Количество растений:</strong> {displayPlants.length}</div>
+                  <div><strong>Типы растений:</strong> {displayPlants.map(p => p.type).join(', ')}</div>
+                  <div><strong>Доступно монет:</strong> {coins}</div>
+                  <div><strong>Данные из props plantsInfo:</strong> {JSON.stringify(plantsInfo?.slice(0, 2))}...</div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <span className="text-4xl">🌾</span>
+              <p className="text-gray-500 mt-2">Нет доступных растений</p>
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg max-w-md mx-auto">
+                <p className="text-sm text-blue-700">
+                  Ошибка загрузки данных. Проверьте консоль для отладки.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

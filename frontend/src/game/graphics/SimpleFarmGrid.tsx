@@ -1,150 +1,169 @@
-// frontend/src/game/graphics/SimpleFarmGrid.tsx
 import React from 'react';
-import { FarmCell } from '../../types/game.types';
+
+interface Plant {
+  id: string;
+  type: string;
+  stage: number;
+  planted_at: string;
+  last_watered: string;
+  is_withered: boolean;
+  position: { x: number; y: number };
+}
 
 interface SimpleFarmGridProps {
-  farm: FarmCell[];
+  farm: Plant[];
   onPlant: (position: { x: number; y: number }) => void;
   onHarvest: (plantId: string, position: { x: number; y: number }) => void;
-  onWater: (x: number, y: number) => void; // Изменен тип
+  onWater: (x: number, y: number) => void;
   selectedSeed: string | null;
 }
 
+const PLANT_EMOJIS: Record<string, string> = {
+  carrot: '🥕',
+  tomato: '🍅',
+  cucumber: '🥒',
+  strawberry: '🍓',
+  pumpkin: '🎃'
+};
+
+const PLANT_STAGES = ['🌱', '🌿', '🌾', '🪴'];
+
 const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
-  farm,
+  farm = [],
   onPlant,
   onHarvest,
   onWater,
   selectedSeed
 }) => {
-  const handleCellClick = (cell: FarmCell) => {
-    if (cell.plant) {
-      if (cell.plant.can_harvest) {
-        onHarvest(cell.plant.id, { x: cell.x, y: cell.y });
+  // Создаем сетку 5x5
+  const gridSize = 5;
+  const grid = [];
+
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const plant = farm.find(p => p.position.x === x && p.position.y === y);
+
+      grid.push({
+        x,
+        y,
+        plant,
+        isEmpty: !plant,
+        isSelected: false
+      });
+    }
+  }
+
+  const getPlantStageEmoji = (plant: Plant) => {
+    if (plant.is_withered) return '🥀';
+    const stageIndex = Math.min(plant.stage, PLANT_STAGES.length - 1);
+    const baseEmoji = PLANT_EMOJIS[plant.type] || '🌱';
+    return PLANT_STAGES[stageIndex];
+  };
+
+  const handleCellClick = (x: number, y: number, plant: Plant | null) => {
+    if (plant) {
+      if (plant.stage >= 3 && !plant.is_withered) {
+        // Собрать урожай
+        onHarvest(plant.id, { x, y });
+      } else if (plant.is_withered) {
+        // Полить завядшее растение
+        onWater(x, y);
       }
     } else {
+      // Посадить семя
       if (selectedSeed) {
-        onPlant({ x: cell.x, y: cell.y });
+        onPlant({ x, y });
       }
     }
   };
 
-  const handleWaterClick = (e: React.MouseEvent, x: number, y: number) => {
-    e.stopPropagation();
-    onWater(x, y); // Просто передаем координаты
-  };
-
-  const getCellBackground = (cell: FarmCell) => {
-    if (cell.plant) {
-      if (cell.plant.can_harvest) {
-        return 'bg-gradient-to-br from-yellow-100 to-yellow-300';
-      } else if (cell.is_watered) {
-        return 'bg-gradient-to-br from-blue-100 to-emerald-100';
-      } else {
-        return 'bg-gradient-to-br from-emerald-50 to-green-100';
-      }
+  const getCellClass = (plant: Plant | null, selectedSeed: string | null) => {
+    if (plant) {
+      if (plant.is_withered) return 'bg-red-50 border-red-300';
+      if (plant.stage >= 3) return 'bg-yellow-50 border-yellow-400';
+      return 'bg-green-50 border-green-300';
     }
-    return 'bg-gradient-to-br from-amber-50 to-orange-50';
+    return selectedSeed ? 'bg-blue-50 border-blue-300 hover:bg-blue-100' : 'bg-gray-50 border-gray-300';
   };
 
-  const getPlantStageText = (progress: number) => {
-    if (progress < 0.1) return 'Семя';
-    if (progress < 0.3) return 'Росток';
-    if (progress < 0.7) return 'Растет';
-    if (progress < 0.9) return 'Созревает';
-    return 'Готово';
+  const getTooltipText = (plant: Plant | null, selectedSeed: string | null) => {
+    if (plant) {
+      if (plant.is_withered) return 'Завядшее растение (полить)';
+      if (plant.stage >= 3) return 'Готово к сбору';
+      return `Растет (стадия ${plant.stage + 1}/4)`;
+    }
+    return selectedSeed ? 'Кликните чтобы посадить' : 'Выберите семя для посадки';
   };
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-5 gap-2 md:gap-3">
-        {farm.map((cell) => (
+    <div className="farm-grid">
+      <div className="mb-4">
+        <p className="text-gray-600">
+          {selectedSeed ? `Выбрано: ${selectedSeed}` : 'Выберите семя для посадки'}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-5 gap-3 max-w-2xl mx-auto">
+        {grid.map((cell, index) => (
           <div
-            key={`${cell.x}-${cell.y}`}
-            className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center relative transition-all duration-300 cursor-pointer hover:scale-105 ${
-              cell.plant 
-                ? cell.plant.can_harvest 
-                  ? 'border-yellow-400 shadow-lg' 
-                  : 'border-green-300'
-                : selectedSeed 
-                  ? 'border-dashed border-blue-300 hover:border-blue-500' 
-                  : 'border-amber-200'
-            } ${getCellBackground(cell)}`}
-            onClick={() => handleCellClick(cell)}
+            key={`${cell.x}-${cell.y}-${index}`}
+            className={`
+              relative w-16 h-16 border-2 rounded-lg flex items-center justify-center cursor-pointer
+              transition-all duration-200 hover:scale-105 hover:shadow-md
+              ${getCellClass(cell.plant, selectedSeed)}
+            `}
+            onClick={() => handleCellClick(cell.x, cell.y, cell.plant)}
+            title={getTooltipText(cell.plant, selectedSeed)}
           >
-            {/* Верхний индикатор - эмодзи растения */}
-            <div className="text-3xl md:text-4xl">
-              {cell.plant ? cell.plant.emoji : '🌱'}
-            </div>
-
-            {/* Индикаторы состояния */}
-            <div className="absolute top-1 right-1 flex flex-col gap-1">
-              {cell.is_watered && (
-                <span className="text-blue-500 text-xs">💧</span>
-              )}
-              {cell.has_fertilizer && (
-                <span className="text-green-500 text-xs">✨</span>
-              )}
-            </div>
-
-            {/* Прогресс роста */}
-            {cell.plant && (
-              <>
-                <div className="absolute bottom-8 left-2 right-2 h-1 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500"
-                    style={{ width: `${cell.plant.progress * 100}%` }}
-                  />
+            {cell.plant ? (
+              <div className="text-center">
+                <div className="text-2xl">
+                  {getPlantStageEmoji(cell.plant)}
                 </div>
-                <div className="absolute bottom-2 text-xs font-medium">
-                  {getPlantStageText(cell.plant.progress)}
-                </div>
-              </>
-            )}
-
-            {/* Кнопки действий */}
-            {cell.plant && !cell.plant.can_harvest && !cell.is_watered && (
-              <button
-                onClick={(e) => handleWaterClick(e, cell.x, cell.y)}
-                className="absolute bottom-1 right-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                💦 Полить
-              </button>
-            )}
-
-            {!cell.plant && selectedSeed && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl opacity-0 hover:opacity-100 transition-opacity">
-                <div className="text-white text-sm font-bold">Посадить</div>
+                {cell.plant.is_withered && (
+                  <div className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                    💧
+                  </div>
+                )}
+                {cell.plant.stage >= 3 && !cell.plant.is_withered && (
+                  <div className="absolute -top-1 -right-1 text-xs bg-yellow-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                    !
+                  </div>
+                )}
               </div>
+            ) : selectedSeed ? (
+              <div className="text-gray-400 text-lg">+</div>
+            ) : (
+              <div className="text-gray-300 text-lg">□</div>
             )}
 
-            {cell.plant?.can_harvest && (
-              <div className="absolute inset-0 flex items-center justify-center bg-yellow-500/20 rounded-xl animate-pulse">
-                <div className="text-yellow-800 text-sm font-bold">⚡ Собрать!</div>
-              </div>
-            )}
+            <div className="absolute bottom-0 left-0 text-xs text-gray-500 p-1">
+              {cell.x},{cell.y}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Легенда */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded"></div>
-          <span>Пустая клетка</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gradient-to-br from-emerald-50 to-green-100 border border-green-300 rounded"></div>
-          <span>Растет</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gradient-to-br from-blue-100 to-emerald-100 border border-green-300 rounded"></div>
-          <span>Полито</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gradient-to-br from-yellow-100 to-yellow-300 border border-yellow-400 rounded"></div>
-          <span>Готово к сбору</span>
-        </div>
+      <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+        <h4 className="font-bold text-gray-700 mb-2">📋 Управление фермой:</h4>
+        <ul className="text-sm text-gray-600 space-y-1">
+          <li className="flex items-center">
+            <span className="w-6">🌱</span>
+            <span>Пустая клетка - посадите семя</span>
+          </li>
+          <li className="flex items-center">
+            <span className="w-6">🌿→🌾→🪴</span>
+            <span>Растущее растение</span>
+          </li>
+          <li className="flex items-center">
+            <span className="w-6 text-yellow-600">🪴</span>
+            <span>Готово к сбору (кликните)</span>
+          </li>
+          <li className="flex items-center">
+            <span className="w-6 text-red-600">🥀</span>
+            <span>Завядшее растение (полить)</span>
+          </li>
+        </ul>
       </div>
     </div>
   );

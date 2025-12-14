@@ -10,7 +10,7 @@ import ShopModal from './components/Shop/ShopModal';
 import SellModal from './components/Sell/SellModal';
 import { useLevelSystem } from './hooks/useLevelSystem';
 import { useGame } from './hooks/useGame';
-import { PlantInfo } from './types/game.types';
+import { PlantInfo, LevelInfo } from './types/game.types';
 import { API_BASE } from './config';
 import { showXpAnimation } from './utils/xpAnimations';
 
@@ -31,17 +31,76 @@ const PLANT_NAMES: Record<string, string> = {
   pumpkin: 'Тыква'
 };
 
+// Тестовые данные растений (если API не работает)
+const DEFAULT_PLANTS: PlantInfo[] = [
+  {
+    type: 'carrot',
+    seed_price: 10,
+    sell_price: 15,
+    growth_time: 300,
+    required_level: 1,
+    rarity: 'common',
+    description: 'Быстрорастущая морковь'
+  },
+  {
+    type: 'tomato',
+    seed_price: 20,
+    sell_price: 30,
+    growth_time: 600,
+    required_level: 2,
+    rarity: 'uncommon',
+    description: 'Сочные помидоры'
+  },
+  {
+    type: 'cucumber',
+    seed_price: 30,
+    sell_price: 45,
+    growth_time: 900,
+    required_level: 3,
+    rarity: 'rare',
+    description: 'Свежие огурцы'
+  },
+  {
+    type: 'strawberry',
+    seed_price: 40,
+    sell_price: 60,
+    growth_time: 1200,
+    required_level: 4,
+    rarity: 'epic',
+    description: 'Сладкая клубника'
+  },
+  {
+    type: 'pumpkin',
+    seed_price: 50,
+    sell_price: 75,
+    growth_time: 1500,
+    required_level: 5,
+    rarity: 'epic',
+    description: 'Большая тыква'
+  }
+];
+
+// Начальные данные уровня
+const DEFAULT_LEVEL_INFO: LevelInfo = {
+  current_level: 1,
+  current_xp: 0,
+  xp_to_next_level: 100,
+  unlocked_plants: ['carrot'],
+  unlocked_features: []
+};
+
 function App() {
-  const [plantsInfo, setPlantsInfo] = useState<PlantInfo[]>([]);
+  const [plantsInfo, setPlantsInfo] = useState<PlantInfo[]>(DEFAULT_PLANTS);
   const [selectedSeed, setSelectedSeed] = useState<string | null>(null);
   const [expandedLevel, setExpandedLevel] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showSell, setShowSell] = useState(false);
   const [notifications, setNotifications] = useState<Array<{id: number, message: string, type: 'success' | 'error' | 'info'}>>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [initialCoins] = useState(100);
 
   // Инициализация хуков
-  const playerId = 1; // В реальном приложении получать из Telegram WebApp
+  const playerId = 1;
   const {
     levelInfo,
     levelUpData,
@@ -64,13 +123,20 @@ function App() {
   // Загрузка информации о растениях
   const fetchPlantsInfo = async () => {
     try {
+      console.log('Fetching plants info from:', `${API_BASE}/api/plants/info`);
       const response = await fetch(`${API_BASE}/api/plants/info`);
+
       if (response.ok) {
         const data = await response.json();
-        setPlantsInfo(data.plants || []);
+        console.log('Plants data received:', data);
+        setPlantsInfo(data.plants || DEFAULT_PLANTS);
+      } else {
+        console.log('Using default plants data');
+        setPlantsInfo(DEFAULT_PLANTS);
       }
     } catch (error) {
       console.error('Error fetching plants info:', error);
+      setPlantsInfo(DEFAULT_PLANTS);
     }
   };
 
@@ -81,7 +147,6 @@ function App() {
       try {
         await Promise.all([
           fetchGameState(),
-          fetchLevelInfo(),
           fetchPlantsInfo()
         ]);
       } catch (error) {
@@ -96,7 +161,7 @@ function App() {
     // Автообновление каждые 30 секунд
     const interval = setInterval(fetchGameState, 30000);
     return () => clearInterval(interval);
-  }, [fetchGameState, fetchLevelInfo]);
+  }, [fetchGameState]);
 
   // Показать уведомление
   const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -109,13 +174,13 @@ function App() {
   }, []);
 
   // Посадка семени
-  const handlePlantSeed = async (row: number, col: number) => {
+  const handlePlant = async (position: { x: number; y: number }) => {
     if (!selectedSeed) {
       showNotification('Выберите семя для посадки', 'error');
       return;
     }
 
-    const result = await apiPlantSeed({ row, col, seedType: selectedSeed });
+    const result = await apiPlantSeed(selectedSeed, position);
     if (result.success) {
       await fetchGameState();
       setSelectedSeed(null);
@@ -126,12 +191,12 @@ function App() {
   };
 
   // Сбор урожая
-  const handleHarvestPlant = async (row: number, col: number) => {
-    const result = await apiHarvestPlant({ row, col });
+  const handleHarvest = async (plantId: string, position: { x: number; y: number }) => {
+    const result = await apiHarvestPlant(plantId);
     if (result.success) {
       if (result.xp) {
         addXP(result.xp);
-        showXpAnimation(result.xp, row, col);
+        showXpAnimation(result.xp, position.y, position.x);
       }
       await fetchGameState();
       showNotification('Урожай собран!', 'success');
@@ -141,8 +206,8 @@ function App() {
   };
 
   // Полив растения
-  const handleWaterPlant = async (row: number, col: number) => {
-    const result = await apiWaterPlant({ row, col });
+  const handleWater = async (x: number, y: number) => {
+    const result = await apiWaterPlant(x, y);
     if (result.success) {
       await fetchGameState();
       showNotification('Растение полито!', 'success');
@@ -153,12 +218,33 @@ function App() {
 
   // Покупка семян
   const handleBuySeed = async (seedType: string, quantity: number) => {
-    const result = await apiBuySeed(seedType, quantity);
-    if (result.success) {
-      await fetchGameState();
-      showNotification(`Куплено ${quantity} семян ${seedType}`, 'success');
-    } else {
-      showNotification(result.error || 'Ошибка покупки', 'error');
+    console.log('Buying seed:', seedType, 'quantity:', quantity);
+
+    const plant = plantsInfo.find(p => p.type === seedType);
+    if (!plant) {
+      showNotification('Растение не найдено', 'error');
+      return;
+    }
+
+    const cost = plant.seed_price * quantity;
+    const currentCoins = gameState?.player?.coins || initialCoins;
+
+    if (currentCoins < cost) {
+      showNotification('Недостаточно монет', 'error');
+      return;
+    }
+
+    try {
+      const result = await apiBuySeed(seedType, quantity);
+      if (result.success) {
+        await fetchGameState();
+        showNotification(`Куплено ${quantity} семян ${PLANT_NAMES[seedType] || seedType}`, 'success');
+      } else {
+        showNotification(result.error || 'Ошибка покупки', 'error');
+      }
+    } catch (error) {
+      console.error('Error buying seed:', error);
+      showNotification('Ошибка при покупке', 'error');
     }
   };
 
@@ -182,20 +268,6 @@ function App() {
     showNotification('Игра обновлена!', 'success');
   };
 
-  // Обработка клика по клетке
-  const handleTileClick = async (row: number, col: number, hasPlant: boolean, plantState?: any) => {
-    if (!hasPlant) {
-      // Пустая клетка - посадка
-      handlePlantSeed(row, col);
-    } else if (plantState?.canHarvest) {
-      // Растение готово к сбору
-      handleHarvestPlant(row, col);
-    } else if (plantState?.canWater) {
-      // Растение можно полить
-      handleWaterPlant(row, col);
-    }
-  };
-
   // Отображение инвентаря семян
   const seedInventory = Object.entries(gameState?.inventory?.seeds || {}).map(([type, count]) => ({
     type,
@@ -216,6 +288,10 @@ function App() {
     );
   }
 
+  // Используем данные из хука или дефолтные
+  const currentLevelInfo = levelInfo || DEFAULT_LEVEL_INFO;
+  const currentCoins = gameState?.player?.coins || initialCoins;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50 p-4">
       {/* Шапка */}
@@ -232,12 +308,12 @@ function App() {
               className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:opacity-90 transition"
             >
               <Star className="w-5 h-5" />
-              <span className="font-bold">Уровень {levelInfo ? levelInfo.current_level : 1}</span>
+              <span className="font-bold">Уровень {currentLevelInfo.current_level}</span>
             </button>
 
             <div className="flex items-center space-x-2 px-4 py-2 bg-amber-100 rounded-xl">
               <Coins className="w-5 h-5 text-amber-600" />
-              <span className="font-bold text-amber-800">{gameState?.player?.coins || 0} монет</span>
+              <span className="font-bold text-amber-800">{currentCoins} монет</span>
             </div>
 
             <div className="flex items-center space-x-2 px-4 py-2 bg-purple-100 rounded-xl">
@@ -257,7 +333,7 @@ function App() {
               className="mb-6 overflow-hidden"
             >
               <LevelProgress
-                levelInfo={levelInfo}
+                levelInfo={currentLevelInfo}
                 onAddXP={addXP}
               />
             </motion.div>
@@ -283,7 +359,10 @@ function App() {
                 <>
                   <SimpleFarmGrid
                     farm={gameState?.farm || []}
-                    plantsInfo={plantsInfo}
+                    onPlant={handlePlant}
+                    onHarvest={handleHarvest}
+                    onWater={handleWater}
+                    selectedSeed={selectedSeed}
                   />
 
                   <div className="mt-6 p-4 bg-green-50 rounded-xl">
@@ -315,7 +394,8 @@ function App() {
                 </div>
               ) : (
                 <div className="text-center p-8 text-gray-500">
-                  <p>Выберите семя из инвентаря</p>
+                  <span className="text-3xl">🌱</span>
+                  <p className="mt-2">Выберите семя из инвентаря</p>
                 </div>
               )}
             </div>
@@ -326,7 +406,7 @@ function App() {
 
               {seedInventory.length > 0 ? (
                 <>
-                  <p className="text-gray-600 mb-4">{seedInventory.length} видов</p>
+                  <p className="text-gray-600 mb-4">{seedInventory.length} видов семян</p>
                   <div className="space-y-3">
                     {seedInventory.map((seed) => (
                       <button
@@ -356,6 +436,9 @@ function App() {
                 <div className="text-center p-8 text-gray-500">
                   <span className="text-4xl block mb-2">🌾</span>
                   <p>Семян нет</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Купите семена в магазине
+                  </p>
                 </div>
               )}
             </div>
@@ -402,34 +485,40 @@ function App() {
 
       {/* Модальные окна */}
       {showShop && (
-        <ShopModal
-          unlockedPlants={levelInfo?.unlocked_plants || []}
-          plantsInfo={plantsInfo}
-          coins={gameState?.player?.coins || 0}
-          onBuy={handleBuySeed}
-          onClose={() => setShowShop(false)}
-        />
-      )}
+  <ShopModal
+    key="shop-modal"
+    unlockedPlants={['carrot', 'tomato', 'cucumber']} // Временно разблокируем растения
+    plantsInfo={plantsInfo}
+    coins={currentCoins}
+    onBuy={handleBuySeed}
+    onClose={() => setShowShop(false)}
+  />
+)}
 
       {showSell && (
         <SellModal
-          inventory={gameState?.inventory?.harvest || {}}
+          key="sell-modal"
           plantsInfo={plantsInfo}
           onSell={handleSellHarvest}
           onClose={() => setShowSell(false)}
+          gameState={gameState}
         />
       )}
 
       {levelUpData && (
         <LevelUpModal
+          key="levelup-modal"
           levelData={levelUpData}
           onClose={closeLevelUpModal}
         />
       )}
 
       {/* UnlockedFeatures с проверкой на null */}
-      {levelInfo && levelInfo.unlocked_features && (
-        <UnlockedFeatures levelInfo={levelInfo} />
+      {currentLevelInfo.unlocked_features && currentLevelInfo.unlocked_features.length > 0 && (
+        <UnlockedFeatures
+          key="unlocked-features"
+          levelInfo={currentLevelInfo}
+        />
       )}
 
       {/* Уведомления */}

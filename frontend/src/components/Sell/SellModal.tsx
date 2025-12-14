@@ -1,35 +1,61 @@
-// frontend/src/components/Sell/SellModal.tsx
 import React, { useState } from 'react';
 import { PlantInfo } from '../../types/game.types';
 import { Coins } from 'lucide-react';
 
-interface HarvestItem {
-  plantType: string;
-  count: number;
-}
-
 interface SellModalProps {
-  harvest: HarvestItem[];
   plantsInfo: PlantInfo[];
-  onSell: (plantType: string, amount: number) => void;
+  onSell: (plantType: string, quantity: number) => void;
   onClose: () => void;
+  gameState?: any; // Добавим gameState в пропсы
 }
 
 const SellModal: React.FC<SellModalProps> = ({
-  harvest,
   plantsInfo,
   onSell,
-  onClose
+  onClose,
+  gameState
 }) => {
-  const [quantities, setQuantities] = useState<Record<string, number>>(
-    harvest.reduce((acc, item) => ({ ...acc, [item.plantType]: 1 }), {})
-  );
+  const [selectedAmounts, setSelectedAmounts] = useState<Record<string, number>>({});
 
-  const getPlantInfo = (plantType: string): PlantInfo | undefined => {
-    return plantsInfo.find(p => p.type === plantType);
+  // Безопасное получение инвентаря
+  const inventory = gameState?.inventory?.harvest || {};
+
+  // Безопасный расчет общего инвентаря
+  const totalInventoryValue = Object.values(inventory).reduce((sum: number, count: any) => {
+    return sum + (Number(count) || 0);
+  }, 0);
+
+  // Получаем растения с урожаем
+  const plantsWithHarvest = plantsInfo
+    .filter(plant => plant && plant.type && (inventory[plant.type] || 0) > 0)
+    .map(plant => ({
+      ...plant,
+      harvestCount: Number(inventory[plant.type]) || 0,
+      totalValue: (Number(inventory[plant.type]) || 0) * (plant.sell_price || 0)
+    }));
+
+  const handleSell = (plantType: string) => {
+    const amount = selectedAmounts[plantType] || 1;
+    onSell(plantType, amount);
+    setSelectedAmounts(prev => ({ ...prev, [plantType]: 1 }));
   };
 
-  const getPlantName = (type: string) => {
+  const increaseAmount = (plantType: string, maxAmount: number) => {
+    setSelectedAmounts(prev => ({
+      ...prev,
+      [plantType]: Math.min(maxAmount, (prev[plantType] || 1) + 1)
+    }));
+  };
+
+  const decreaseAmount = (plantType: string) => {
+    setSelectedAmounts(prev => ({
+      ...prev,
+      [plantType]: Math.max(1, (prev[plantType] || 1) - 1)
+    }));
+  };
+
+  const getPlantName = (type: string | undefined) => {
+    if (!type) return 'Неизвестное растение';
     const names: Record<string, string> = {
       carrot: 'Морковь',
       tomato: 'Помидор',
@@ -40,7 +66,8 @@ const SellModal: React.FC<SellModalProps> = ({
     return names[type] || type;
   };
 
-  const getPlantEmoji = (type: string) => {
+  const getPlantEmoji = (type: string | undefined) => {
+    if (!type) return '🌱';
     const emojis: Record<string, string> = {
       carrot: '🥕',
       tomato: '🍅',
@@ -48,62 +75,21 @@ const SellModal: React.FC<SellModalProps> = ({
       strawberry: '🍓',
       pumpkin: '🎃'
     };
-    return emojis[type] || '🌾';
-  };
-
-  const increaseQuantity = (plantType: string) => {
-    const item = harvest.find(h => h.plantType === plantType);
-    if (item) {
-      setQuantities(prev => ({
-        ...prev,
-        [plantType]: Math.min(item.count, (prev[plantType] || 1) + 1)
-      }));
-    }
-  };
-
-  const decreaseQuantity = (plantType: string) => {
-    setQuantities(prev => ({
-      ...prev,
-      [plantType]: Math.max(1, (prev[plantType] || 1) - 1)
-    }));
-  };
-
-  const calculateTotalPrice = () => {
-    return harvest.reduce((total, item) => {
-      const plantInfo = getPlantInfo(item.plantType);
-      const price = plantInfo?.sell_price || 0;
-      const quantity = quantities[item.plantType] || 0;
-      return total + (price * quantity);
-    }, 0);
-  };
-
-  const handleSellAll = () => {
-    harvest.forEach(item => {
-      onSell(item.plantType, item.count);
-    });
-    onClose();
-  };
-
-  const handleSellSelected = () => {
-    harvest.forEach(item => {
-      const quantity = quantities[item.plantType] || 0;
-      if (quantity > 0) {
-        onSell(item.plantType, quantity);
-      }
-    });
-    onClose();
+    return emojis[type] || '🌱';
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">💰 Продажа урожая</h2>
+            <h2 className="text-2xl font-bold text-gray-800">💰 Продать урожай</h2>
             <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
-                <Coins className="h-4 w-4 text-green-600" />
-                <span className="font-bold text-green-700">Всего: {calculateTotalPrice()}🪙</span>
+              <div className="flex items-center gap-2 bg-amber-50 px-3 py-1 rounded-full">
+                <Coins className="h-4 w-4 text-amber-600" />
+                <span className="font-bold text-amber-700">
+                  Всего урожая: {totalInventoryValue} шт.
+                </span>
               </div>
             </div>
           </div>
@@ -115,99 +101,98 @@ const SellModal: React.FC<SellModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
-          {harvest.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-5xl mb-4">📭</div>
-              <p className="text-gray-600 text-lg">Урожая нет</p>
-              <p className="text-gray-500 text-sm mt-2">Сначала соберите растения с фермы</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {harvest.map((item) => {
-                const plantInfo = getPlantInfo(item.plantType);
-                const quantity = quantities[item.plantType] || 1;
-                const itemTotal = (plantInfo?.sell_price || 0) * quantity;
-                const plantName = getPlantName(item.plantType);
-                const plantEmoji = getPlantEmoji(item.plantType);
+        <div className="p-6 overflow-y-auto max-h-[70vh]">
+          {plantsWithHarvest.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {plantsWithHarvest.map((plant, index) => {
+                const amount = selectedAmounts[plant.type] || 1;
+                const maxAmount = plant.harvestCount;
+                const totalPrice = (plant.sell_price || 0) * amount;
+                const plantName = getPlantName(plant.type);
+                const plantEmoji = getPlantEmoji(plant.type);
 
                 return (
-                  <div key={item.plantType} className="border rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-3xl">{plantEmoji}</span>
-                        <div>
-                          <h3 className="font-bold text-gray-800">{plantName}</h3>
-                          <div className="text-sm text-gray-600">
-                            В наличии: {item.count} шт.
+                  <div
+                    key={`${plant.type}-${index}`}
+                    className="border rounded-xl p-4 hover:border-amber-400 hover:shadow-lg transition-all"
+                  >
+                    <div className="flex flex-col h-full">
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{plantEmoji}</span>
+                            <div>
+                              <h3 className="font-bold text-gray-800">{plantName}</h3>
+                              <div className="text-xs text-gray-500">
+                                В инвентаре: {plant.harvestCount} шт.
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-green-600">
+                              {plant.sell_price}🪙
+                            </div>
+                            <div className="text-xs text-gray-500">за 1 шт.</div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-green-600">
-                          {plantInfo?.sell_price || 0}🪙
-                        </div>
-                        <div className="text-xs text-gray-500">за шт.</div>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-600">Продать:</div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => decreaseQuantity(item.plantType)}
-                            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-                          >
-                            −
-                          </button>
-                          <span className="font-bold w-12 text-center">{quantity}</span>
-                          <button
-                            onClick={() => increaseQuantity(item.plantType)}
-                            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-                          >
-                            +
-                          </button>
+                        <div className="text-sm text-gray-600 mb-4">
+                          <div>Можно продать: {plant.harvestCount} шт.</div>
+                          <div>Общая стоимость: {plant.totalValue}🪙</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-600">Количество:</div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => decreaseAmount(plant.type)}
+                              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                              disabled={amount <= 1}
+                            >
+                              −
+                            </button>
+                            <span className="font-bold w-8 text-center">{amount}</span>
+                            <button
+                              onClick={() => increaseAmount(plant.type, maxAmount)}
+                              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                              disabled={amount >= maxAmount}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between font-bold">
+                          <span>Итого:</span>
+                          <span className="text-green-600">
+                            {totalPrice}🪙
+                          </span>
                         </div>
 
                         <button
-                          onClick={() => onSell(item.plantType, item.count)}
-                          className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-sm font-medium hover:bg-yellow-200"
+                          onClick={() => handleSell(plant.type)}
+                          className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold transition-colors"
                         >
-                          Все
+                          Продать {amount} шт. за {totalPrice}🪙
                         </button>
                       </div>
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Итого за этот товар:</span>
-                      <span className="font-bold text-green-600">{itemTotal}🪙</span>
                     </div>
                   </div>
                 );
               })}
             </div>
+          ) : (
+            <div className="text-center py-12">
+              <span className="text-4xl">🌾</span>
+              <p className="text-gray-500 mt-2">Нет урожая для продажи</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Соберите урожай с растений, чтобы продать его здесь
+              </p>
+            </div>
           )}
         </div>
-
-        {harvest.length > 0 && (
-          <div className="sticky bottom-0 bg-white border-t px-6 py-4">
-            <div className="flex gap-3">
-              <button
-                onClick={handleSellSelected}
-                className="flex-1 bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 transition-colors"
-              >
-                Продать выбранное ({calculateTotalPrice()}🪙)
-              </button>
-              <button
-                onClick={handleSellAll}
-                className="px-6 bg-yellow-500 text-white py-3 rounded-lg font-bold hover:bg-yellow-600 transition-colors"
-              >
-                Всё
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

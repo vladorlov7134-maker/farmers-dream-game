@@ -192,11 +192,11 @@ function App() {
 
   // Сбор урожая
 const handleHarvest = async (plantId: string, position: { x: number; y: number }) => {
-  const result = await apiHarvestPlant(plantId, position); // Теперь передаем оба параметра
+  const result = await apiHarvestPlant(plantId); // Только 1 аргумент
   if (result.success) {
     if (result.xp) {
       addXP(result.xp);
-      showXpAnimation(result.xp, position.y, position.x);
+      showXpAnimation(result.xp, position.y, position.x); // 3 аргумента - правильно
     }
     await fetchGameState();
     showNotification('Урожай собран!', 'success');

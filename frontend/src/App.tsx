@@ -1,7 +1,7 @@
 // frontend/src/App.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gamepad2, Coins, Gem, Sprout, Star } from 'lucide-react';
+import { Gamepad2, Coins, Gem, Sprout, Star, Menu, X } from 'lucide-react';
 import SimpleFarmGrid from './game/graphics/SimpleFarmGrid';
 import LevelProgress from './components/LevelSystem/LevelProgress';
 import LevelUpModal from './components/LevelSystem/LevelUpModal';
@@ -98,6 +98,7 @@ function App() {
   const [notifications, setNotifications] = useState<Array<{id: number, message: string, type: 'success' | 'error' | 'info'}>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [initialCoins] = useState(100);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Инициализация хуков
   const playerId = 1;
@@ -292,32 +293,62 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
   const currentCoins = gameState?.player?.coins || initialCoins;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50 p-4">
-      {/* Шапка */}
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50 p-3 sm:p-4">
+      {/* Шапка - АДАПТИВНАЯ ВЕРСИЯ */}
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6 p-4 bg-white rounded-2xl shadow-lg">
-          <div className="flex items-center space-x-4">
-            <Gamepad2 className="w-8 h-8 text-green-600" />
-            <h1 className="text-3xl font-bold text-gray-800">Farmers Dream</h1>
-          </div>
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4 sm:mb-6 p-3 sm:p-4 bg-white rounded-xl sm:rounded-2xl shadow-lg">
 
-          <div className="flex items-center space-x-6">
-            <button
-              onClick={() => setExpandedLevel(!expandedLevel)}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:opacity-90 transition"
-            >
-              <Star className="w-5 h-5" />
-              <span className="font-bold">Уровень {currentLevelInfo.current_level}</span>
-            </button>
-
-            <div className="flex items-center space-x-2 px-4 py-2 bg-amber-100 rounded-xl">
-              <Coins className="w-5 h-5 text-amber-600" />
-              <span className="font-bold text-amber-800">{currentCoins} монет</span>
+          {/* Левая часть: Логотип и название + мобильное меню */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Gamepad2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-green-600" />
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 truncate">
+                Farmers Dream
+              </h1>
             </div>
 
-            <div className="flex items-center space-x-2 px-4 py-2 bg-purple-100 rounded-xl">
-              <Gem className="w-5 h-5 text-purple-600" />
-              <span className="font-bold text-purple-800">{gameState?.player?.diamonds || 0} кристаллов</span>
+            {/* Мобильное меню кнопка (только на мобильных) */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="sm:hidden p-1.5 rounded-lg bg-gray-100"
+            >
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5 text-gray-700" />
+              ) : (
+                <Menu className="w-5 h-5 text-gray-700" />
+              )}
+            </button>
+          </div>
+
+          {/* Правая часть: Уровень и валюта (скрыто на мобильных в меню) */}
+          <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} sm:flex flex-wrap gap-2 justify-end`}>
+
+            {/* Уровень */}
+            <button
+              onClick={() => {
+                setExpandedLevel(!expandedLevel);
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center space-x-1 sm:space-x-2 px-3 py-1.5 sm:px-3 sm:py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg sm:rounded-xl hover:opacity-90 transition w-full sm:w-auto justify-center"
+            >
+              <Star className="w-4 h-4 sm:w-4 sm:h-4" />
+              <span className="font-bold text-sm sm:text-base">Ур. {currentLevelInfo.current_level}</span>
+            </button>
+
+            {/* Монеты */}
+            <div className="flex items-center space-x-1 sm:space-x-2 px-3 py-1.5 sm:px-3 sm:py-2 bg-amber-100 rounded-lg sm:rounded-xl w-full sm:w-auto justify-center">
+              <Coins className="w-4 h-4 sm:w-4 sm:h-4 text-amber-600" />
+              <span className="font-bold text-amber-800 text-sm sm:text-base whitespace-nowrap">
+                {currentCoins}
+              </span>
+            </div>
+
+            {/* Кристаллы */}
+            <div className="flex items-center space-x-1 sm:space-x-2 px-3 py-1.5 sm:px-3 sm:py-2 bg-purple-100 rounded-lg sm:rounded-xl w-full sm:w-auto justify-center">
+              <Gem className="w-4 h-4 sm:w-4 sm:h-4 text-purple-600" />
+              <span className="font-bold text-purple-800 text-sm sm:text-base whitespace-nowrap">
+                {gameState?.player?.diamonds || 0}
+              </span>
             </div>
           </div>
         </div>
@@ -329,29 +360,29 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-6 overflow-hidden"
+              className="mb-4 sm:mb-6 overflow-hidden"
             >
               <LevelProgress
-        levelInfo={currentLevelInfo}
-        onAddXP={addXP}
-      />
-    </motion.div>
-  )}
-</AnimatePresence>
+                levelInfo={currentLevelInfo}
+                onAddXP={addXP}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Основной контент */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Ферма */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Ваша ферма</h2>
-              <p className="text-gray-600 mb-6">5x5 клеток для выращивания растений</p>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Ваша ферма</h2>
+              <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">5x5 клеток для выращивания растений</p>
 
               {gameLoading ? (
-                <div className="flex justify-center items-center h-96">
+                <div className="flex justify-center items-center h-64 sm:h-96">
                   <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Ферма загружается...</p>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+                    <p className="text-gray-600 text-sm sm:text-base">Ферма загружается...</p>
                   </div>
                 </div>
               ) : (
@@ -364,10 +395,10 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
                     selectedSeed={selectedSeed}
                   />
 
-                  <div className="mt-6 p-4 bg-green-50 rounded-xl">
-                    <p className="text-green-700 flex items-center">
-                      <Sprout className="w-5 h-5 mr-2" />
-                      💡 Совет: Нажмите на пустую клетку, чтобы посадить выбранное семя. Собирайте урожай вовремя, чтобы получить больше XP!
+                  <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-xl">
+                    <p className="text-green-700 flex items-start sm:items-center text-sm sm:text-base">
+                      <Sprout className="w-4 h-4 sm:w-5 sm:h-5 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>💡 Совет: Нажмите на пустую клетку, чтобы посадить выбранное семя. Собирайте урожай вовремя, чтобы получить больше XP!</span>
                     </p>
                   </div>
                 </>
@@ -376,66 +407,69 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
           </div>
 
           {/* Боковая панель */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Выбранное семя */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">🌱 Выбрано для посадки</h3>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">🌱 Выбрано для посадки</h3>
 
               {selectedSeed ? (
-                <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-xl">
-                  <span className="text-3xl">{PLANT_EMOJIS[selectedSeed] || '🌱'}</span>
+                <div className="flex items-center space-x-2 sm:space-x-3 p-3 sm:p-4 bg-green-50 rounded-xl">
+                  <span className="text-2xl sm:text-3xl">{PLANT_EMOJIS[selectedSeed] || '🌱'}</span>
                   <div>
-                    <p className="font-bold text-gray-800">{PLANT_NAMES[selectedSeed] || selectedSeed}</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="font-bold text-gray-800 text-sm sm:text-base">{PLANT_NAMES[selectedSeed] || selectedSeed}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">
                       В инвентаре: {gameState?.inventory?.seeds?.[selectedSeed] || 0} шт.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="text-center p-8 text-gray-500">
-                  <span className="text-3xl">🌱</span>
-                  <p className="mt-2">Выберите семя из инвентаря</p>
+                <div className="text-center p-6 sm:p-8 text-gray-500">
+                  <span className="text-2xl sm:text-3xl">🌱</span>
+                  <p className="mt-2 text-sm sm:text-base">Выберите семя из инвентаря</p>
                 </div>
               )}
             </div>
 
             {/* Инвентарь семян */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">🎒 Семена</h3>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">🎒 Семена</h3>
 
               {seedInventory.length > 0 ? (
                 <>
-                  <p className="text-gray-600 mb-4">{seedInventory.length} видов семян</p>
-                  <div className="space-y-3">
+                  <p className="text-gray-600 mb-3 sm:mb-4 text-sm sm:text-base">{seedInventory.length} видов семян</p>
+                  <div className="space-y-2 sm:space-y-3">
                     {seedInventory.map((seed) => (
                       <button
                         key={seed.type}
-                        onClick={() => setSelectedSeed(seed.type)}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl transition ${
+                        onClick={() => {
+                          setSelectedSeed(seed.type);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl transition ${
                           selectedSeed === seed.type
                             ? 'bg-green-100 border-2 border-green-500'
                             : 'bg-gray-50 hover:bg-gray-100'
                         }`}
                       >
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl">{seed.emoji}</span>
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <span className="text-xl sm:text-2xl">{seed.emoji}</span>
                           <div className="text-left">
-                            <p className="font-bold text-gray-800">{seed.name}</p>
-                            <p className="text-sm text-gray-600">{seed.count} шт.</p>
+                            <p className="font-bold text-gray-800 text-sm sm:text-base">{seed.name}</p>
+                            <p className="text-xs sm:text-sm text-gray-600">{seed.count} шт.</p>
                           </div>
                         </div>
                         {selectedSeed === seed.type && (
-                          <span className="text-green-600 font-bold">✓ Выбрано</span>
+                          <span className="text-green-600 font-bold text-sm sm:text-base">✓</span>
                         )}
                       </button>
                     ))}
                   </div>
                 </>
               ) : (
-                <div className="text-center p-8 text-gray-500">
-                  <span className="text-4xl block mb-2">🌾</span>
-                  <p>Семян нет</p>
-                  <p className="text-sm text-gray-400 mt-1">
+                <div className="text-center p-6 sm:p-8 text-gray-500">
+                  <span className="text-3xl sm:text-4xl block mb-2">🌾</span>
+                  <p className="text-sm sm:text-base">Семян нет</p>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1">
                     Купите семена в магазине
                   </p>
                 </div>
@@ -443,37 +477,46 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
             </div>
 
             {/* Быстрые действия */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">⚡ Быстрые действия</h3>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">⚡ Быстрые действия</h3>
 
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <button
-                  onClick={() => setShowShop(true)}
-                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl hover:opacity-90 transition"
+                  onClick={() => {
+                    setShowShop(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg sm:rounded-xl hover:opacity-90 transition"
                 >
-                  <span className="font-bold">🛒 Магазин семян</span>
-                  <span className="text-lg">→</span>
+                  <span className="font-bold text-sm sm:text-base">🛒 Магазин семян</span>
+                  <span className="text-base sm:text-lg">→</span>
                 </button>
 
                 <button
-                  onClick={() => setShowSell(true)}
-                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl hover:opacity-90 transition"
+                  onClick={() => {
+                    setShowSell(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg sm:rounded-xl hover:opacity-90 transition"
                 >
-                  <span className="font-bold">💰 Продать урожай</span>
-                  <span className="text-lg">→</span>
+                  <span className="font-bold text-sm sm:text-base">💰 Продать урожай</span>
+                  <span className="text-base sm:text-lg">→</span>
                 </button>
 
                 <button
-                  onClick={handleRefreshGame}
-                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:opacity-90 transition"
+                  onClick={() => {
+                    handleRefreshGame();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg sm:rounded-xl hover:opacity-90 transition"
                 >
-                  <span className="font-bold">🔄 Обновить игру</span>
-                  <span className="text-lg">↻</span>
+                  <span className="font-bold text-sm sm:text-base">🔄 Обновить игру</span>
+                  <span className="text-base sm:text-lg">↻</span>
                 </button>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                <p className="text-blue-700">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-xl">
+                <p className="text-blue-700 text-sm sm:text-base">
                   💎 Совет: Выполняйте действия регулярно, чтобы быстрее повышать уровень и открывать новые возможности!
                 </p>
               </div>
@@ -484,15 +527,15 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
 
       {/* Модальные окна */}
       {showShop && (
-  <ShopModal
-    key="shop-modal"
-    unlockedPlants={['carrot', 'tomato', 'cucumber']} // Временно разблокируем растения
-    plantsInfo={plantsInfo}
-    coins={currentCoins}
-    onBuy={handleBuySeed}
-    onClose={() => setShowShop(false)}
-  />
-)}
+        <ShopModal
+          key="shop-modal"
+          unlockedPlants={['carrot', 'tomato', 'cucumber']} // Временно разблокируем растения
+          plantsInfo={plantsInfo}
+          coins={currentCoins}
+          onBuy={handleBuySeed}
+          onClose={() => setShowShop(false)}
+        />
+      )}
 
       {showSell && (
         <SellModal
@@ -521,7 +564,7 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
       )}
 
       {/* Уведомления */}
-      <div className="fixed bottom-4 right-4 space-y-2 z-50">
+      <div className="fixed bottom-3 sm:bottom-4 right-3 sm:right-4 space-y-2 z-50">
         <AnimatePresence>
           {notifications.map((notification) => (
             <motion.div
@@ -529,7 +572,7 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}
-              className={`px-6 py-3 rounded-xl shadow-lg ${
+              className={`px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl shadow-lg text-sm sm:text-base ${
                 notification.type === 'success' ? 'bg-green-500' :
                 notification.type === 'error' ? 'bg-red-500' :
                 'bg-blue-500'

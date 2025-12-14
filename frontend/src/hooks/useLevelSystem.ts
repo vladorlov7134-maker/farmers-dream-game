@@ -1,59 +1,71 @@
-// frontend/src/hooks/useLevelSystem.ts
 import { useState, useCallback } from 'react';
+import axios from 'axios';
+import { LevelInfo, LevelUpData } from '../types/game.types';
 import { API_BASE } from '../config';
-import { LevelInfo, LevelUpData } from '../types/game.types'; // Убрали AddXPRequest
 
 export const useLevelSystem = (playerId: number) => {
-  const [levelInfo, setLevelInfo] = useState<LevelInfo>({
-    current_level: 1,
-    current_xp: 0,
-    xp_to_next_level: 100,
-    unlocked_plants: ['carrot'],
-    unlocked_features: []
-  });
-
+  const [levelInfo, setLevelInfo] = useState<LevelInfo | null>(null);
   const [levelUpData, setLevelUpData] = useState<LevelUpData | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchLevelInfo = useCallback(async () => {
-    return levelInfo;
-  }, [levelInfo]);
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE}/api/levels/${playerId}`);
+      const levelData = response.data; // ИЗМЕНЕНО: добавлена переменная
 
-  const addXP = useCallback(async (xpAmount: number) => {
-    console.log('Adding XP locally:', xpAmount);
+      setLevelInfo({
+        current_level: levelData.current_level,
+        current_xp: levelData.current_xp,
+        xp_to_next_level: levelData.xp_to_next_level,
+        unlocked_plants: levelData.unlocked_plants || [],
+        unlocked_features: levelData.unlocked_features || []
+      });
 
-    setLevelInfo(prev => {
-      const newXP = prev.current_xp + xpAmount;
-      let newLevel = prev.current_level;
-      let xpToNext = prev.xp_to_next_level;
-
-      if (newXP >= xpToNext) {
-        newLevel += 1;
-        const remainingXP = newXP - xpToNext;
-
-        let newUnlockedPlants = [...prev.unlocked_plants];
-        if (newLevel >= 2 && !newUnlockedPlants.includes('tomato')) {
-          newUnlockedPlants.push('tomato');
-        }
-        if (newLevel >= 3 && !newUnlockedPlants.includes('cucumber')) {
-          newUnlockedPlants.push('cucumber');
-        }
-        if (newLevel >= 4 && !newUnlockedPlants.includes('strawberry')) {
-          newUnlockedPlants.push('strawberry');
-        }
-        if (newLevel >= 5 && !newUnlockedPlants.includes('pumpkin')) {
-          newUnlockedPlants.push('pumpkin');
-        }
-
+      if (levelData.level_up) {
         setLevelUpData({
-  old_level: data.old_level,
-  new_level: data.new_level,
-  rewards: {
-    coins: data.reward_coins || 0,
-    diamonds: data.reward_diamonds,
-    unlocked_plants: data.unlocked_plants,
-    unlocked_features: data.unlocked_features
-  }
-});
+          old_level: levelData.old_level,
+          new_level: levelData.new_level,
+          rewards: {
+            coins: levelData.reward_coins || 0,
+            diamonds: levelData.reward_diamonds,
+            unlocked_plants: levelData.unlocked_plants,
+            unlocked_features: levelData.unlocked_features
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching level info:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [playerId]);
+
+  const addXP = useCallback(async (xp: number) => {
+    try {
+      await axios.post(`${API_BASE}/api/levels/add-xp`, {
+        playerId,
+        xp
+      });
+      await fetchLevelInfo();
+    } catch (error) {
+      console.error('Error adding XP:', error);
+    }
+  }, [playerId, fetchLevelInfo]);
+
+  const closeLevelUpModal = useCallback(() => {
+    setLevelUpData(null);
+  }, []);
+
+  return {
+    levelInfo,
+    levelUpData,
+    loading,
+    fetchLevelInfo,
+    addXP,
+    closeLevelUpModal
+  };
+};
 
         return {
           ...prev,

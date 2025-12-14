@@ -59,22 +59,19 @@ export const useGame = (playerId: number) => {
     }
   }, [playerId]);
 
-  const waterPlant = useCallback(async (x: number, y: number) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/game/water`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegram_id: playerId,
-          x,
-          y
-        })
-      });
-      return await response.json();
-    } catch (err) {
-      return { success: false, error: 'Network error' };
-    }
-  }, [playerId]);
+  const waterPlant = async (plantId: string) => {
+  try {
+    const response = await axios.post(`${API_BASE}/api/farm/water`, {
+      plantId // Отправляем только plantId
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Ошибка полива'
+    };
+  }
+};
 
   const buySeed = useCallback(async (plantType: string, amount: number) => {
     try {

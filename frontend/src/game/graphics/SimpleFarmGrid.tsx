@@ -1,3 +1,4 @@
+// frontend/src/game/graphics/SimpleFarmGrid.tsx
 import React from 'react';
 
 interface Plant {
@@ -60,12 +61,15 @@ const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
     return PLANT_STAGES[stageIndex];
   };
 
-  const handleCellClick = (x: number, y: number, plant: Plant | null) => {
-    if (plant) {
-      if (plant.stage >= 3 && !plant.is_withered) {
+  const handleCellClick = (x: number, y: number, plant: Plant | null | undefined) => {
+    // Преобразуем undefined в null
+    const safePlant = plant || null;
+
+    if (safePlant) {
+      if (safePlant.stage >= 3 && !safePlant.is_withered) {
         // Собрать урожай
-        onHarvest(plant.id, { x, y });
-      } else if (plant.is_withered) {
+        onHarvest(safePlant.id, { x, y });
+      } else if (safePlant.is_withered) {
         // Полить завядшее растение
         onWater(x, y);
       }
@@ -110,10 +114,10 @@ const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
             className={`
               relative w-16 h-16 border-2 rounded-lg flex items-center justify-center cursor-pointer
               transition-all duration-200 hover:scale-105 hover:shadow-md
-              ${getCellClass(cell.plant, selectedSeed)}
+              ${getCellClass(cell.plant || null, selectedSeed)}
             `}
-            onClick={() => handleCellClick(cell.x, cell.y, cell.plant)}
-            title={getTooltipText(cell.plant, selectedSeed)}
+            onClick={() => handleCellClick(cell.x, cell.y, cell.plant || null)}
+            title={getTooltipText(cell.plant || null, selectedSeed)}
           >
             {cell.plant ? (
               <div className="text-center">

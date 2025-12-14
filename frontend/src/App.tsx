@@ -191,8 +191,8 @@ function App() {
   };
 
   // Сбор урожая
-  const handleHarvest = async (plantId: string, position: { x: number; y: number }) => {
-    const result = await apiHarvestPlant(plantId);
+const handleHarvest = async (plantId: string, position: { x: number; y: number }) => {
+  const result = await apiHarvestPlant(plantId);
     if (result.success) {
       if (result.xp) {
         addXP(result.xp);
@@ -335,6 +335,8 @@ function App() {
               <LevelProgress
                 levelInfo={currentLevelInfo}
                 onAddXP={addXP}
+                <LevelProgress
+  levelInfo={currentLevelInfo}
               />
             </motion.div>
           )}

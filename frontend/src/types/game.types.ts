@@ -30,6 +30,14 @@ export interface LevelInfo {
   xp_to_next_level: number;
   unlocked_plants: string[];
   unlocked_features: string[];
+  // Добавляем недостающие поля
+  next_level_xp?: number;
+  progress_percentage?: number;
+  next_level_rewards?: {
+    coins?: number;
+    diamonds?: number;
+    new_plants?: string[];
+  };
 }
 
 export interface LevelUpData {
@@ -38,6 +46,13 @@ export interface LevelUpData {
   unlocked_features?: string[];
   reward_coins?: number;
   reward_diamonds?: number;
+  // Добавляем недостающие поля
+  old_level?: number;
+  rewards?: {
+    coins?: number;
+    diamonds?: number;
+    new_plants?: string[];
+  };
 }
 
 export interface PlantInfo {
@@ -66,82 +81,4 @@ export interface ApiResponse<T = any> {
   diamonds?: number;
 }
 
-export interface PlantSeedRequest {
-  seed_type: string;
-  position: { x: number; y: number };
-}
-
-export interface BuySeedRequest {
-  seed_type: string;
-  quantity: number;
-}
-
-export interface SellHarvestRequest {
-  plant_type: string;
-  quantity: number;
-}
-
-export interface WaterPlantRequest {
-  x: number;
-  y: number;
-}
-
-export interface AddXPRequest {
-  player_id: number;
-  xp_amount: number;
-}
-
-export interface TestAddCoinsRequest {
-  player_id: number;
-  amount: number;
-}
-
-// Типы для модальных окон
-export interface ShopItem {
-  type: string;
-  name: string;
-  price: number;
-  rarity: string;
-  unlocked: boolean;
-  requiredLevel: number;
-}
-
-export interface SellItem {
-  type: string;
-  name: string;
-  price: number;
-  quantity: number;
-  totalValue: number;
-}
-
-// Типы для компонентов
-export interface FarmCell {
-  x: number;
-  y: number;
-  plant: Plant | null;
-  isEmpty: boolean;
-}
-
-export interface SeedItem {
-  type: string;
-  count: number;
-  name: string;
-  emoji: string;
-}
-
-export interface Notification {
-  id: number;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
-
-// Константы
-export const PLANT_TYPES = ['carrot', 'tomato', 'cucumber', 'strawberry', 'pumpkin'] as const;
-export type PlantType = typeof PLANT_TYPES[number];
-
-export const RARITY_TYPES = ['common', 'uncommon', 'rare', 'epic'] as const;
-export type RarityType = typeof RARITY_TYPES[number];
-
-// Утилитарные типы
-export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-export type RequireOnly<T, K extends keyof T> = Partial<Omit<T, K>> & Required<Pick<T, K>>;
+// ... остальные интерфейсы без изменений

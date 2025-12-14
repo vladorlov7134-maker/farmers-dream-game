@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gamepad2, Coins, Gem, Sprout, Star, Menu, X } from 'lucide-react';
-import AnimatedFarmGrid from './game/graphics/AnimatedFarmGrid';
+import TopographicFarm from './game/graphics/TopographicFarm';
 import LevelProgress from './components/LevelSystem/LevelProgress';
 import LevelUpModal from './components/LevelSystem/LevelUpModal';
 import UnlockedFeatures from './components/LevelSystem/UnlockedFeatures';
@@ -387,7 +387,7 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
                 </div>
               ) : (
                 <>
-                  <AnimatedFarmGrid
+                  <TopographicFarm
   farm={gameState?.farm || []}
   onPlant={handlePlant}
   onHarvest={handleHarvest}

@@ -65,3 +65,32 @@ body {
     opacity: 0.8;
   }
 }
+
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  .farm-grid {
+    transform-origin: top center;
+  }
+}
+
+/* Запрет выделения на мобильных */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Для интерактивных элементов разрешаем выделение */
+button, input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

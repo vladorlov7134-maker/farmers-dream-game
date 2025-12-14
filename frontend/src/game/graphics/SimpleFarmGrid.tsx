@@ -1,4 +1,4 @@
-// frontend/src/game/graphics/SimpleFarmGrid.tsx
+// frontend/src/game/graphics/SimpleFarmGrid.tsx (ИЗМЕНЕННАЯ СЕТКА)
 import React from 'react';
 
 interface Plant {
@@ -36,14 +36,12 @@ const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
   onWater,
   selectedSeed
 }) => {
-  // Создаем сетку 5x5
   const gridSize = 5;
   const grid = [];
 
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       const plant = farm.find(p => p.position.x === x && p.position.y === y);
-
       grid.push({
         x,
         y,
@@ -57,24 +55,19 @@ const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
   const getPlantStageEmoji = (plant: Plant) => {
     if (plant.is_withered) return '🥀';
     const stageIndex = Math.min(plant.stage, PLANT_STAGES.length - 1);
-    const baseEmoji = PLANT_EMOJIS[plant.type] || '🌱';
     return PLANT_STAGES[stageIndex];
   };
 
   const handleCellClick = (x: number, y: number, plant: Plant | null | undefined) => {
-    // Преобразуем undefined в null
     const safePlant = plant || null;
 
     if (safePlant) {
       if (safePlant.stage >= 3 && !safePlant.is_withered) {
-        // Собрать урожай
         onHarvest(safePlant.id, { x, y });
       } else if (safePlant.is_withered) {
-        // Полить завядшее растение
         onWater(x, y);
       }
     } else {
-      // Посадить семя
       if (selectedSeed) {
         onPlant({ x, y });
       }
@@ -100,20 +93,22 @@ const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
   };
 
   return (
-    <div className="farm-grid">
-      <div className="mb-4">
-        <p className="text-gray-600">
+    <div className="farm-grid px-2 xs:px-4">
+      <div className="mb-3 xs:mb-4">
+        <p className="text-gray-600 text-sm xs:text-base">
           {selectedSeed ? `Выбрано: ${selectedSeed}` : 'Выберите семя для посадки'}
         </p>
       </div>
 
-      <div className="grid grid-cols-5 gap-3 max-w-2xl mx-auto">
+      {/* ИЗМЕНЕННАЯ СЕТКА - АДАПТИВНАЯ */}
+      <div className="grid grid-cols-5 gap-1.5 xs:gap-2 sm:gap-3 w-full max-w-[280px] xs:max-w-[320px] sm:max-w-[400px] mx-auto">
         {grid.map((cell, index) => (
           <div
             key={`${cell.x}-${cell.y}-${index}`}
             className={`
-              relative w-16 h-16 border-2 rounded-lg flex items-center justify-center cursor-pointer
-              transition-all duration-200 hover:scale-105 hover:shadow-md
+              relative w-10 h-10 xs:w-12 xs:h-12 sm:w-14 sm:h-14 md:w-16 md:h-16
+              border-2 rounded-lg flex items-center justify-center cursor-pointer
+              transition-all duration-200 active:scale-95 hover:scale-105 hover:shadow-md
               ${getCellClass(cell.plant || null, selectedSeed)}
             `}
             onClick={() => handleCellClick(cell.x, cell.y, cell.plant || null)}
@@ -121,36 +116,36 @@ const SimpleFarmGrid: React.FC<SimpleFarmGridProps> = ({
           >
             {cell.plant ? (
               <div className="text-center">
-                <div className="text-2xl">
+                <div className="text-xl xs:text-2xl sm:text-3xl">
                   {getPlantStageEmoji(cell.plant)}
                 </div>
                 {cell.plant.is_withered && (
-                  <div className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 text-[10px] xs:text-xs bg-red-500 text-white rounded-full w-3 h-3 xs:w-4 xs:h-4 flex items-center justify-center">
                     💧
                   </div>
                 )}
                 {cell.plant.stage >= 3 && !cell.plant.is_withered && (
-                  <div className="absolute -top-1 -right-1 text-xs bg-yellow-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 text-[10px] xs:text-xs bg-yellow-500 text-white rounded-full w-3 h-3 xs:w-4 xs:h-4 flex items-center justify-center">
                     !
                   </div>
                 )}
               </div>
             ) : selectedSeed ? (
-              <div className="text-gray-400 text-lg">+</div>
+              <div className="text-gray-400 text-lg xs:text-xl">+</div>
             ) : (
-              <div className="text-gray-300 text-lg">□</div>
+              <div className="text-gray-300 text-lg xs:text-xl">□</div>
             )}
 
-            <div className="absolute bottom-0 left-0 text-xs text-gray-500 p-1">
+            <div className="absolute bottom-0 left-0 text-[8px] xs:text-[10px] sm:text-xs text-gray-500 p-0.5">
               {cell.x},{cell.y}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-        <h4 className="font-bold text-gray-700 mb-2">📋 Управление фермой:</h4>
-        <ul className="text-sm text-gray-600 space-y-1">
+      <div className="mt-4 xs:mt-6 p-3 xs:p-4 bg-gray-50 rounded-xl">
+        <h4 className="font-bold text-gray-700 mb-2 text-sm xs:text-base">📋 Управление фермой:</h4>
+        <ul className="text-xs xs:text-sm text-gray-600 space-y-1">
           <li className="flex items-center">
             <span className="w-6">🌱</span>
             <span>Пустая клетка - посадите семя</span>

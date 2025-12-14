@@ -1,4 +1,3 @@
-// frontend/src/components/Shop/ShopModal.tsx
 import React, { useState } from 'react';
 import { PlantInfo } from '../../types/game.types';
 import { Coins } from 'lucide-react';
@@ -23,7 +22,6 @@ const ShopModal: React.FC<ShopModalProps> = ({
   const handleBuy = (plantType: string) => {
     const amount = selectedAmounts[plantType] || 1;
     onBuy(plantType, amount);
-    // Сбросить количество после покупки
     setSelectedAmounts(prev => ({ ...prev, [plantType]: 1 }));
   };
 
@@ -41,7 +39,7 @@ const ShopModal: React.FC<ShopModalProps> = ({
     }));
   };
 
-  const getRarityColor = (rarity: string) => {
+  const getRarityColor = (rarity: string | undefined) => {
     switch (rarity) {
       case 'common': return 'text-gray-600 bg-gray-100';
       case 'uncommon': return 'text-green-600 bg-green-100';
@@ -51,7 +49,7 @@ const ShopModal: React.FC<ShopModalProps> = ({
     }
   };
 
-  const getRarityName = (rarity: string) => {
+  const getRarityName = (rarity: string | undefined) => {
     switch (rarity) {
       case 'common': return 'Обычный';
       case 'uncommon': return 'Необычный';
@@ -61,7 +59,8 @@ const ShopModal: React.FC<ShopModalProps> = ({
     }
   };
 
-  const getPlantName = (type: string) => {
+  const getPlantName = (type: string | undefined) => {
+    if (!type) return 'Неизвестное растение';
     const names: Record<string, string> = {
       carrot: 'Морковь',
       tomato: 'Помидор',
@@ -72,7 +71,8 @@ const ShopModal: React.FC<ShopModalProps> = ({
     return names[type] || type;
   };
 
-  const getPlantEmoji = (type: string) => {
+  const getPlantEmoji = (type: string | undefined) => {
+    if (!type) return '🌱';
     const emojis: Record<string, string> = {
       carrot: '🥕',
       tomato: '🍅',
@@ -106,101 +106,106 @@ const ShopModal: React.FC<ShopModalProps> = ({
 
         <div className="p-6 overflow-y-auto max-h-[70vh]">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {plantsInfo.map((plant) => {
-              const isUnlocked = unlockedPlants.includes(plant.type);
-              const amount = selectedAmounts[plant.type] || 1;
-              const totalPrice = plant.seed_price * amount;
-              const canAfford = coins >= totalPrice;
-              const plantName = getPlantName(plant.type);
+            {Array.isArray(plantsInfo) && plantsInfo.length > 0 ? (
+              plantsInfo.map((plant) => {
+                const isUnlocked = Array.isArray(unlockedPlants) && unlockedPlants.includes(plant.type);
+                const amount = selectedAmounts[plant.type] || 1;
+                const totalPrice = plant.seed_price * amount;
+                const canAfford = coins >= totalPrice;
+                const plantName = getPlantName(plant.type);
+                const plantEmoji = getPlantEmoji(plant.type);
 
-              return (
-                <div
-                  key={plant.type}
-                  className={`border rounded-xl p-4 transition-all ${
-                    isUnlocked
-                      ? 'hover:border-green-400 hover:shadow-lg'
-                      : 'opacity-60'
-                  } ${!isUnlocked ? 'cursor-not-allowed' : ''}`}
-                >
-                  <div className="flex flex-col h-full">
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-3xl">{getPlantEmoji(plant.type)}</span>
-                          <div>
-                            <h3 className="font-bold text-gray-800">{plantName}</h3>
-                            <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(plant.rarity)}`}>
-                              {getRarityName(plant.rarity)}
+                return (
+                  <div
+                    key={plant.id || plant.type} // Используем plant.id, если есть, иначе plant.type
+                    className={`border rounded-xl p-4 transition-all ${
+                      isUnlocked
+                        ? 'hover:border-green-400 hover:shadow-lg'
+                        : 'opacity-60'
+                    } ${!isUnlocked ? 'cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex flex-col h-full">
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{plantEmoji}</span>
+                            <div>
+                              <h3 className="font-bold text-gray-800">{plantName}</h3>
+                              <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(plant.rarity)}`}>
+                                {getRarityName(plant.rarity)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-green-600">
+                              {plant.seed_price}🪙
+                            </div>
+                            <div className="text-xs text-gray-500">за 1 шт.</div>
+                          </div>
+                        </div>
+
+                        <div className="text-sm text-gray-600 mb-4">
+                          <div>Продажа: {plant.sell_price}🪙 за шт.</div>
+                          <div>Время роста: {Math.floor(plant.growth_time / 60)} мин</div>
+                        </div>
+
+                        {!isUnlocked && (
+                          <div className="mb-3 p-2 bg-yellow-50 rounded-lg">
+                            <p className="text-xs text-yellow-700 text-center">
+                              🔒 Откроется на {plant.required_level} уровне
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {isUnlocked && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-gray-600">Количество:</div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => decreaseAmount(plant.type)}
+                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                              >
+                                −
+                              </button>
+                              <span className="font-bold w-8 text-center">{amount}</span>
+                              <button
+                                onClick={() => increaseAmount(plant.type)}
+                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between font-bold">
+                            <span>Итого:</span>
+                            <span className={`${canAfford ? 'text-green-600' : 'text-red-600'}`}>
+                              {totalPrice}🪙
                             </span>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-green-600">
-                            {plant.seed_price}🪙
-                          </div>
-                          <div className="text-xs text-gray-500">за 1 шт.</div>
-                        </div>
-                      </div>
 
-                      <div className="text-sm text-gray-600 mb-4">
-                        <div>Продажа: {plant.sell_price}🪙 за шт.</div>
-                        <div>Время роста: {Math.floor(plant.growth_time / 60)} мин</div>
-                      </div>
-
-                      {!isUnlocked && (
-                        <div className="mb-3 p-2 bg-yellow-50 rounded-lg">
-                          <p className="text-xs text-yellow-700 text-center">
-                            🔒 Откроется на {plant.required_level} уровне
-                          </p>
+                          <button
+                            onClick={() => handleBuy(plant.type)}
+                            disabled={!canAfford}
+                            className={`w-full py-2 rounded-lg font-bold transition-colors ${
+                              canAfford
+                                ? 'bg-green-500 hover:bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {canAfford ? `Купить ${amount} шт.` : 'Недостаточно монет'}
+                          </button>
                         </div>
                       )}
                     </div>
-
-                    {isUnlocked && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-600">Количество:</div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => decreaseAmount(plant.type)}
-                              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-                            >
-                              −
-                            </button>
-                            <span className="font-bold w-8 text-center">{amount}</span>
-                            <button
-                              onClick={() => increaseAmount(plant.type)}
-                              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between font-bold">
-                          <span>Итого:</span>
-                          <span className={`${canAfford ? 'text-green-600' : 'text-red-600'}`}>
-                            {totalPrice}🪙
-                          </span>
-                        </div>
-
-                        <button
-                          onClick={() => handleBuy(plant.type)}
-                          disabled={!canAfford}
-                          className={`w-full py-2 rounded-lg font-bold transition-colors ${
-                            canAfford
-                              ? 'bg-green-500 hover:bg-green-600 text-white'
-                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {canAfford ? `Купить ${amount} шт.` : 'Недостаточно монет'}
-                        </button>
-                      </div>
-                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <p key="no-plants">Нет доступных растений</p>
+            )}
           </div>
         </div>
       </div>

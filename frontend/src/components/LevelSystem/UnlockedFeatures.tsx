@@ -1,105 +1,36 @@
-// frontend/src/components/LevelSystem/UnlockedFeatures.tsx
+﻿// src/components/LevelSystem/UnlockedFeatures.tsx
 import React from 'react';
 import { LevelInfo } from '../../types/game.types';
 
 interface UnlockedFeaturesProps {
-  levelInfo: LevelInfo;
+  levelInfo: LevelInfo | null;
 }
 
 const UnlockedFeatures: React.FC<UnlockedFeaturesProps> = ({ levelInfo }) => {
-  const { unlocked_features, unlocked_plants } = levelInfo;
+  // ✅ Защита от null/undefined
+  if (!levelInfo) {
+    console.log('UnlockedFeatures: levelInfo is null');
+    return null;
+  }
 
-  const getFeatureIcon = (feature: string): string => {
-    const icons: Record<string, string> = {
-      basic_planting: '🌱',
-      watering: '💦',
-      selling: '💰',
-      fertilizer: '✨',
-      greenhouse_unlock: '🏠',
-      greenhouse_build: '🔨',
-      auto_watering: '🤖'
-    };
-    return icons[feature] || '🔓';
-  };
+  if (!levelInfo.unlocked_features) {
+    console.log('UnlockedFeatures: unlocked_features is missing');
+    return null;
+  }
 
-  const getPlantEmoji = (plant: string): string => {
-    const emojis: Record<string, string> = {
-      carrot: '🥕',
-      tomato: '🍅',
-      cucumber: '🥒',
-      strawberry: '🍓',
-      pumpkin: '🎃'
-    };
-    return emojis[plant] || '🌱';
-  };
-
-  const getPlantName = (plant: string): string => {
-    const names: Record<string, string> = {
-      carrot: 'Морковь',
-      tomato: 'Помидор',
-      cucumber: 'Огурец',
-      strawberry: 'Клубника',
-      pumpkin: 'Тыква'
-    };
-    return names[plant] || plant;
-  };
-
-  const getFeatureName = (feature: string): string => {
-    const names: Record<string, string> = {
-      basic_planting: 'Посадка',
-      watering: 'Полив',
-      selling: 'Продажа',
-      fertilizer: 'Удобрения',
-      greenhouse_unlock: 'Теплица',
-      greenhouse_build: 'Строительство',
-      auto_watering: 'Автополив'
-    };
-    return names[feature] || feature;
-  };
+  const { unlocked_features } = levelInfo;
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 mb-4">
-      <h3 className="text-lg font-bold text-white mb-3">🎯 Открытый контент</h3>
-
-      {unlocked_plants.length > 0 && (
-        <div className="mb-4">
-          <h4 className="text-white/80 font-medium mb-2">🌱 Растения:</h4>
-          <div className="flex flex-wrap gap-2">
-            {unlocked_plants.map((plant, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-2 bg-white/20 text-white px-3 py-2 rounded-lg"
-              >
-                <span className="text-xl">{getPlantEmoji(plant)}</span>
-                <span className="font-medium">{getPlantName(plant)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {unlocked_features.length > 0 && (
-        <div>
-          <h4 className="text-white/80 font-medium mb-2">⚡ Возможности:</h4>
-          <div className="grid grid-cols-2 gap-2">
-            {unlocked_features.map((feature, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-2 bg-white/10 text-white px-3 py-2 rounded-lg"
-              >
-                <span className="text-xl">{getFeatureIcon(feature)}</span>
-                <span className="font-medium text-sm">{getFeatureName(feature)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {unlocked_plants.length === 0 && unlocked_features.length === 0 && (
-        <div className="text-center py-4">
-          <p className="text-white/80">Пока ничего не открыто. Повышайте уровень!</p>
-        </div>
-      )}
+    <div className="fixed bottom-24 right-4 bg-white p-4 rounded-xl shadow-lg max-w-xs border border-green-200">
+      <h3 className="font-bold text-gray-800 mb-2">🎯 Разблокировано</h3>
+      <ul className="space-y-1">
+        {unlocked_features.map((feature: string, index: number) => (
+          <li key={index} className="text-sm text-gray-600 flex items-center">
+            <span className="text-green-500 mr-2">✓</span>
+            {feature}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

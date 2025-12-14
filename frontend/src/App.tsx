@@ -38,6 +38,7 @@ function App() {
   const [showShop, setShowShop] = useState(false);
   const [showSell, setShowSell] = useState(false);
   const [notifications, setNotifications] = useState<Array<{id: number, message: string, type: 'success' | 'error' | 'info'}>>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Инициализация хуков
   const playerId = 1; // В реальном приложении получать из Telegram WebApp
@@ -60,25 +61,10 @@ function App() {
     sellHarvest: apiSellHarvest
   } = useGame(playerId);
 
-  // Загрузка начальных данных
-  useEffect(() => {
-    const loadInitialData = async () => {
-      await fetchGameState();
-      await fetchLevelInfo();
-      await fetchPlantsInfo();
-    };
-
-    loadInitialData();
-
-    // Автообновление каждые 30 секунд
-    const interval = setInterval(fetchGameState, 30000);
-    return () => clearInterval(interval);
-  }, [fetchGameState, fetchLevelInfo]);
-
   // Загрузка информации о растениях
   const fetchPlantsInfo = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/plants_info`);
+      const response = await fetch(`${API_BASE}/api/plants/info`);
       if (response.ok) {
         const data = await response.json();
         setPlantsInfo(data.plants || []);
@@ -87,6 +73,30 @@ function App() {
       console.error('Error fetching plants info:', error);
     }
   };
+
+  // Загрузка начальных данных
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      try {
+        await Promise.all([
+          fetchGameState(),
+          fetchLevelInfo(),
+          fetchPlantsInfo()
+        ]);
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInitialData();
+
+    // Автообновление каждые 30 секунд
+    const interval = setInterval(fetchGameState, 30000);
+    return () => clearInterval(interval);
+  }, [fetchGameState, fetchLevelInfo]);
 
   // Показать уведомление
   const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -98,612 +108,349 @@ function App() {
     }, 3000);
   }, []);
 
-  // Обработчик посадки растения
-  const handlePlantSeed = async (position: { x: number, y: number }) => {
+  // Посадка семени
+  const handlePlantSeed = async (row: number, col: number) => {
     if (!selectedSeed) {
       showNotification('Выберите семя для посадки', 'error');
       return;
     }
 
-    try {
-      const result = await apiPlantSeed(selectedSeed, position);
-
-      if (result.success) {
-        showNotification(`Посажено: ${PLANT_NAMES[selectedSeed] || selectedSeed}`, 'success');
-
-        // Добавляем XP за посадку
-        const xpAmount = getXpForAction('planting', selectedSeed);
-        await addXP(xpAmount, 'planting');
-
-        // Показываем анимацию XP
-        showXpAnimation(xpAmount, position);
-
-        // Обновляем состояние
-        await fetchGameState();
-        setSelectedSeed(null);
-      } else {
-        showNotification(result.error || 'Ошибка посадки', 'error');
-      }
-    } catch (error) {
-      showNotification('Ошибка при посадке', 'error');
+    const result = await apiPlantSeed(row, col, selectedSeed);
+    if (result.success) {
+      await fetchGameState();
+      setSelectedSeed(null);
+      showNotification('Семя посажено!', 'success');
+    } else {
+      showNotification(result.error || 'Ошибка посадки', 'error');
     }
   };
 
-  // Обработчик сбора урожая
-  const handleHarvestPlant = async (plantId: string, position: { x: number, y: number }) => {
-    try {
-      const result = await apiHarvestPlant(plantId);
-
-      if (result.success) {
-        showNotification(`Собрано ${result.yield_count} урожая!`, 'success');
-
-        // Добавляем XP за сбор
-        const xpAmount = getXpForAction('harvesting', result.plant_type);
-        await addXP(xpAmount, 'harvesting');
-
-        // Показываем анимацию XP
-        showXpAnimation(xpAmount, position);
-
-        // Обновляем состояние
-        await fetchGameState();
-      } else {
-        showNotification(result.error || 'Ошибка сбора', 'error');
+  // Сбор урожая
+  const handleHarvestPlant = async (row: number, col: number) => {
+    const result = await apiHarvestPlant(row, col);
+    if (result.success) {
+      if (result.xp) {
+        addXP(result.xp);
+        showXpAnimation(result.xp, row, col);
       }
-    } catch (error) {
-      showNotification('Ошибка при сборе урожая', 'error');
+      await fetchGameState();
+      showNotification('Урожай собран!', 'success');
+    } else {
+      showNotification(result.error || 'Ошибка сбора', 'error');
     }
   };
 
-  // Обработчик полива - ИСПРАВЛЕН ТИП
-  const handleWaterPlant = async (x: number, y: number) => {
-    try {
-      const result = await apiWaterPlant(x, y);
-
-      if (result.success) {
-        showNotification('Растение полито!', 'success');
-
-        // Добавляем XP за полив
-        await addXP(2, 'watering');
-
-        // Показываем анимацию XP
-        showXpAnimation(2, { x, y });
-
-        // Обновляем состояние
-        await fetchGameState();
-      } else {
-        showNotification(result.error || 'Ошибка полива', 'error');
-      }
-    } catch (error) {
-      showNotification('Ошибка при поливе', 'error');
+  // Полив растения
+  const handleWaterPlant = async (row: number, col: number) => {
+    const result = await apiWaterPlant(row, col);
+    if (result.success) {
+      await fetchGameState();
+      showNotification('Растение полито!', 'success');
+    } else {
+      showNotification(result.error || 'Ошибка полива', 'error');
     }
   };
 
-  // Обработчик покупки семян
-  const handleBuySeed = async (plantType: string, amount: number) => {
-    try {
-      const result = await apiBuySeed(plantType, amount);
-
-      if (result.success) {
-        showNotification(`Куплено ${amount} семян за ${result.total_price}🪙`, 'success');
-        await fetchGameState();
-      } else {
-        showNotification(result.error || 'Ошибка покупки', 'error');
-      }
-    } catch (error) {
-      showNotification('Ошибка при покупке', 'error');
+  // Покупка семян
+  const handleBuySeed = async (seedType: string, quantity: number) => {
+    const result = await apiBuySeed(seedType, quantity);
+    if (result.success) {
+      await fetchGameState();
+      showNotification(`Куплено ${quantity} семян ${seedType}`, 'success');
+    } else {
+      showNotification(result.error || 'Ошибка покупки', 'error');
     }
   };
 
-  // Обработчик продажи урожая
-  const handleSellHarvest = async (plantType: string, amount: number) => {
-    try {
-      const result = await apiSellHarvest(plantType, amount);
-
-      if (result.success) {
-        showNotification(`Продано ${amount} урожая за ${result.total_price}🪙`, 'success');
-
-        // Добавляем XP за продажу
-        const xpAmount = getXpForAction('selling', plantType) * amount;
-        await addXP(xpAmount, 'selling');
-
-        await fetchGameState();
-      } else {
-        showNotification(result.error || 'Ошибка продажи', 'error');
+  // Продажа урожая
+  const handleSellHarvest = async (plantType: string, quantity: number) => {
+    const result = await apiSellHarvest(plantType, quantity);
+    if (result.success) {
+      if (result.xp) {
+        addXP(result.xp);
       }
-    } catch (error) {
-      showNotification('Ошибка при продаже', 'error');
+      await fetchGameState();
+      showNotification(`Продано ${quantity} урожая`, 'success');
+    } else {
+      showNotification(result.error || 'Ошибка продажи', 'error');
     }
-  };
-
-  // Получить XP за действие
-  const getXpForAction = (action: 'planting' | 'harvesting' | 'selling', plantType: string): number => {
-    const xpValues: Record<string, Record<string, number>> = {
-      planting: {
-        carrot: 5,
-        tomato: 7,
-        cucumber: 8,
-        strawberry: 10,
-        pumpkin: 15
-      },
-      harvesting: {
-        carrot: 10,
-        tomato: 15,
-        cucumber: 18,
-        strawberry: 25,
-        pumpkin: 40
-      },
-      selling: {
-        carrot: 1,
-        tomato: 2,
-        cucumber: 3,
-        strawberry: 4,
-        pumpkin: 10
-      }
-    };
-
-    return xpValues[action]?.[plantType] || 5;
-  };
-
-  // Получить информацию о растении
-  const getPlantInfo = (plantType: string): PlantInfo | undefined => {
-    return plantsInfo.find(p => p.type === plantType);
-  };
-
-  // Проверить, открыто ли растение
-  const isPlantUnlocked = (plantType: string): boolean => {
-    if (!levelInfo) return false;
-    return levelInfo.unlocked_plants.includes(plantType);
   };
 
   // Обновить игру
-  const handleUpdateGame = async () => {
+  const handleRefreshGame = async () => {
     await fetchGameState();
     showNotification('Игра обновлена!', 'success');
   };
 
-  // Добавить тестовые XP
-  const handleAddTestXP = async () => {
-    const result = await addXP(100, 'test');
-    if (result) {
-      showNotification('+100 XP добавлено!', 'success');
+  // Обработка клика по клетке
+  const handleTileClick = async (row: number, col: number, hasPlant: boolean, plantState?: any) => {
+    if (!hasPlant) {
+      // Пустая клетка - посадка
+      handlePlantSeed(row, col);
+    } else if (plantState?.canHarvest) {
+      // Растение готово к сбору
+      handleHarvestPlant(row, col);
+    } else if (plantState?.canWater) {
+      // Растение можно полить
+      handleWaterPlant(row, col);
     }
   };
 
-  // Полить все растения
-  const handleWaterAll = async () => {
-    if (!gameState?.farm) return;
+  // Отображение инвентаря семян
+  const seedInventory = Object.entries(gameState?.seeds || {}).map(([type, count]) => ({
+    type,
+    count: count as number,
+    name: PLANT_NAMES[type] || type,
+    emoji: PLANT_EMOJIS[type] || '🌱'
+  }));
 
-    let wateredCount = 0;
-    for (const cell of gameState.farm) {
-      if (cell.plant && !cell.is_watered) {
-        await handleWaterPlant(cell.x, cell.y);
-        wateredCount++;
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-
-    if (wateredCount === 0) {
-      showNotification('Все растения уже политы', 'info');
-    } else {
-      showNotification(`Полито ${wateredCount} растений`, 'success');
-    }
-  };
-
-  // Фильтрация доступных семян
-  const availableSeeds = gameState?.inventory.seeds
-    ? Object.entries(gameState.inventory.seeds)
-        .filter(([plantType, count]) => count > 0 && isPlantUnlocked(plantType))
-        .map(([plantType, count]) => ({ plantType, count }))
-    : [];
-
-  // Фильтрация урожая
-  const availableHarvest = gameState?.inventory.harvest
-    ? Object.entries(gameState.inventory.harvest)
-        .filter(([_, count]) => count > 0)
-        .map(([plantType, count]) => ({ plantType, count }))
-    : [];
-
-  // Загрузка
-  if (gameLoading && !gameState) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-green-700 text-lg">Загрузка фермы...</p>
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Farmers Dream</h1>
+          <p className="text-gray-600">Загрузка фермы...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 p-4 md:p-6">
-      {/* Уведомления */}
-      <div className="fixed top-4 right-4 z-50 space-y-2 w-80">
-        <AnimatePresence>
-          {notifications.map(notification => (
-            <motion.div
-              key={notification.id}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 100 }}
-              className={`rounded-lg p-4 shadow-lg ${
-                notification.type === 'success' ? 'bg-green-100 border border-green-300 text-green-800' :
-                notification.type === 'error' ? 'bg-red-100 border border-red-300 text-red-800' :
-                'bg-blue-100 border border-blue-300 text-blue-800'
-              }`}
-            >
-              {notification.message}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-amber-50 p-4">
+      {/* Шапка */}
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-6 p-4 bg-white rounded-2xl shadow-lg">
+          <div className="flex items-center space-x-4">
+            <Gamepad2 className="w-8 h-8 text-green-600" />
+            <h1 className="text-3xl font-bold text-gray-800">Farmers Dream</h1>
+          </div>
 
-      <div className="max-w-7xl mx-auto">
-        {/* Шапка */}
-        <header className="mb-6 md:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-2xl">
-                <Gamepad2 className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-green-800 mb-1">
-                  Farmers Dream
-                </h1>
-                <p className="text-green-600">Выращивай, собирай, развивайся!</p>
-              </div>
+          <div className="flex items-center space-x-6">
+            <button
+              onClick={() => setExpandedLevel(!expandedLevel)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:opacity-90 transition"
+            >
+              <Star className="w-5 h-5" />
+              <span className="font-bold">Уровень {levelInfo?.currentLevel || 1}</span>
+            </button>
+
+            <div className="flex items-center space-x-2 px-4 py-2 bg-amber-100 rounded-xl">
+              <Coins className="w-5 h-5 text-amber-600" />
+              <span className="font-bold text-amber-800">{gameState?.coins || 0} монет</span>
             </div>
 
-            {/* Баланс */}
-            {gameState && (
-              <div className="flex flex-wrap gap-3">
-                <div className="bg-gradient-to-r from-yellow-100 to-yellow-50 border-2 border-yellow-300 rounded-xl px-4 py-3 flex items-center gap-2 min-w-[140px]">
-                  <Coins className="h-5 w-5 text-yellow-600" />
-                  <div>
-                    <div className="text-sm text-yellow-700">Монеты</div>
-                    <div className="text-xl font-bold text-yellow-800">
-                      {gameState.inventory.coins}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-blue-100 to-cyan-50 border-2 border-blue-300 rounded-xl px-4 py-3 flex items-center gap-2 min-w-[140px]">
-                  <Gem className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <div className="text-sm text-blue-700">Алмазы</div>
-                    <div className="text-xl font-bold text-blue-800">
-                      {gameState.inventory.diamonds}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="flex items-center space-x-2 px-4 py-2 bg-purple-100 rounded-xl">
+              <Gem className="w-5 h-5 text-purple-600" />
+              <span className="font-bold text-purple-800">{gameState?.gems || 0} кристаллов</span>
+            </div>
           </div>
-        </header>
+        </div>
 
-        {/* Система уровней */}
-        {levelInfo && (
-          <div className="mb-6">
-            <LevelProgress
-              levelInfo={levelInfo}
-              onToggle={() => setExpandedLevel(!expandedLevel)}
-              expanded={expandedLevel}
-            />
-
-            {expandedLevel && (
-              <UnlockedFeatures levelInfo={levelInfo} />
-            )}
-          </div>
-        )}
-
-        {/* Модальное окно повышения уровня */}
-        {levelUpData && (
-          <LevelUpModal
-            levelData={levelUpData}
-            onClose={closeLevelUpModal}
-          />
-        )}
-
-        {/* Модальные окна магазина и продажи */}
-        {showShop && (
-          <ShopModal
-            plantsInfo={plantsInfo}
-            coins={gameState?.inventory.coins || 0}
-            onBuy={handleBuySeed}
-            onClose={() => setShowShop(false)}
-            unlockedPlants={levelInfo?.unlocked_plants || []}
-          />
-        )}
-
-        {showSell && (
-          <SellModal
-            harvest={availableHarvest}
-            plantsInfo={plantsInfo}
-            onSell={handleSellHarvest}
-            onClose={() => setShowSell(false)}
-          />
-        )}
+        {/* Уровень (расширяемый) */}
+        <AnimatePresence>
+          {expandedLevel && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 overflow-hidden"
+            >
+              <LevelProgress
+                levelInfo={levelInfo}
+                onAddXP={addXP}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Основной контент */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Левая колонка - Ферма */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Ферма */}
           <div className="lg:col-span-2">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-xl border border-green-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-green-800 flex items-center gap-2">
-                    <Sprout className="h-6 w-6" />
-                    Ваша ферма
-                  </h2>
-                  <p className="text-green-600 mt-1">5x5 клеток для выращивания растений</p>
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Ваша ферма</h2>
+              <p className="text-gray-600 mb-6">5x5 клеток для выращивания растений</p>
+
+              {gameLoading ? (
+                <div className="flex justify-center items-center h-96">
+                  <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Ферма загружается...</p>
+                  </div>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setShowShop(true)}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
-                  >
-                    <Coins className="h-4 w-4" />
-                    Купить семена
-                  </button>
-
-                  <button
-                    onClick={() => setShowSell(true)}
-                    className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
-                  >
-                    💰 Продать урожай
-                  </button>
-
-                  <button
-                    onClick={handleUpdateGame}
-                    className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    Обновить
-                  </button>
-                </div>
-              </div>
-
-              {/* Игровое поле */}
-              {gameState ? (
-                <SimpleFarmGrid
-                  farm={gameState.farm}
-                  onPlant={handlePlantSeed}
-                  onHarvest={handleHarvestPlant}
-                  onWater={handleWaterPlant}
-                  selectedSeed={selectedSeed}
-                />
               ) : (
-                <div className="h-96 flex items-center justify-center">
-                  <p className="text-green-700">Ферма загружается...</p>
-                </div>
-              )}
+                <>
+                  <SimpleFarmGrid
+                    farm={gameState?.farm || []}
+                    onTileClick={handleTileClick}
+                    plantsInfo={plantsInfo}
+                  />
 
-              <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
-                <p className="text-green-700 text-sm">
-                  💡 <strong>Совет:</strong> Нажмите на пустую клетку, чтобы посадить выбранное семя.
-                  Собирайте урожай вовремя, чтобы получить больше XP!
-                </p>
-              </div>
+                  <div className="mt-6 p-4 bg-green-50 rounded-xl">
+                    <p className="text-green-700 flex items-center">
+                      <Sprout className="w-5 h-5 mr-2" />
+                      💡 Совет: Нажмите на пустую клетку, чтобы посадить выбранное семя. Собирайте урожай вовремя, чтобы получить больше XP!
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Правая колонка - Инвентарь и действия */}
+          {/* Боковая панель */}
           <div className="space-y-6">
             {/* Выбранное семя */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-xl border border-green-200">
-              <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
-                🌱 Выбрано для посадки
-              </h3>
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">🌱 Выбрано для посадки</h3>
 
               {selectedSeed ? (
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-300">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{PLANT_EMOJIS[selectedSeed] || '🌱'}</span>
-                    <div>
-                      <div className="font-bold text-green-800">
-                        {PLANT_NAMES[selectedSeed] || selectedSeed}
-                      </div>
-                      <div className="text-sm text-green-600">
-                        {availableSeeds.find(s => s.plantType === selectedSeed)?.count || 0} шт.
-                      </div>
-                    </div>
+                <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-xl">
+                  <span className="text-3xl">{PLANT_EMOJIS[selectedSeed] || '🌱'}</span>
+                  <div>
+                    <p className="font-bold text-gray-800">{PLANT_NAMES[selectedSeed] || selectedSeed}</p>
+                    <p className="text-sm text-gray-600">
+                      В инвентаре: {gameState?.seeds?.[selectedSeed] || 0} шт.
+                    </p>
                   </div>
-                  <button
-                    onClick={() => setSelectedSeed(null)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    ×
-                  </button>
                 </div>
               ) : (
-                <div className="text-center p-6 text-green-600">
-                  <div className="text-4xl mb-2">🌱</div>
+                <div className="text-center p-8 text-gray-500">
                   <p>Выберите семя из инвентаря</p>
                 </div>
               )}
             </div>
 
             {/* Инвентарь семян */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-xl border border-green-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-green-800 flex items-center gap-2">
-                  🎒 Семена
-                </h3>
-                <span className="text-sm text-green-600">
-                  {availableSeeds.length} видов
-                </span>
-              </div>
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">🎒 Семена</h3>
 
-              {availableSeeds.length > 0 ? (
-                <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-                  {availableSeeds.map(({ plantType, count }) => {
-                    const plantInfo = getPlantInfo(plantType);
-                    const unlocked = isPlantUnlocked(plantType);
-
-                    return (
-                      <motion.div
-                        key={plantType}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => unlocked && setSelectedSeed(plantType)}
-                        className={`p-3 rounded-xl cursor-pointer transition-all ${
-                          selectedSeed === plantType
-                            ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400'
-                            : 'bg-green-50 border border-green-200 hover:border-green-300'
-                        } ${!unlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              {seedInventory.length > 0 ? (
+                <>
+                  <p className="text-gray-600 mb-4">{seedInventory.length} видов</p>
+                  <div className="space-y-3">
+                    {seedInventory.map((seed) => (
+                      <button
+                        key={seed.type}
+                        onClick={() => setSelectedSeed(seed.type)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl transition ${
+                          selectedSeed === seed.type
+                            ? 'bg-green-100 border-2 border-green-500'
+                            : 'bg-gray-50 hover:bg-gray-100'
+                        }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">
-                              {PLANT_EMOJIS[plantType] || '🌱'}
-                            </span>
-                            <div>
-                              <div className="font-semibold text-green-800">
-                                {PLANT_NAMES[plantType] || plantType}
-                              </div>
-                              <div className="text-sm text-green-600">
-                                {count} шт. • {plantInfo?.seed_price || '?'}🪙
-                              </div>
-                            </div>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-2xl">{seed.emoji}</span>
+                          <div className="text-left">
+                            <p className="font-bold text-gray-800">{seed.name}</p>
+                            <p className="text-sm text-gray-600">{seed.count} шт.</p>
                           </div>
-
-                          {!unlocked ? (
-                            <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                              🔒 Уровень {plantInfo?.required_level || '?'}
-                            </div>
-                          ) : (
-                            <button className="text-green-600 hover:text-green-800">
-                              {selectedSeed === plantType ? '✓ Выбрано' : 'Выбрать'}
-                            </button>
-                          )}
                         </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                        {selectedSeed === seed.type && (
+                          <span className="text-green-600 font-bold">✓ Выбрано</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
               ) : (
-                <div className="text-center p-6 text-green-600">
-                  <div className="text-4xl mb-2">🌾</div>
+                <div className="text-center p-8 text-gray-500">
+                  <span className="text-4xl block mb-2">🌾</span>
                   <p>Семян нет</p>
-                  <button
-                    onClick={() => setShowShop(true)}
-                    className="mt-2 text-green-700 hover:text-green-900 underline"
-                  >
-                    Купить в магазине
-                  </button>
                 </div>
               )}
             </div>
 
-            {/* Урожай */}
-            {availableHarvest.length > 0 && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-xl border border-green-200">
-                <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
-                  📦 Урожай
-                </h3>
-
-                <div className="space-y-3">
-                  {availableHarvest.map(({ plantType, count }) => {
-                    const plantInfo = getPlantInfo(plantType);
-
-                    return (
-                      <div
-                        key={plantType}
-                        className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">
-                            {PLANT_EMOJIS[plantType] || '🌾'}
-                          </span>
-                          <div>
-                            <div className="font-semibold text-yellow-800">
-                              {PLANT_NAMES[plantType] || plantType}
-                            </div>
-                            <div className="text-sm text-yellow-600">
-                              {count} шт. • {plantInfo?.sell_price || '?'}🪙 за шт.
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-yellow-700 font-bold">
-                          {count * (plantInfo?.sell_price || 0)}🪙
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* Быстрые действия */}
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 md:p-6 shadow-xl border border-purple-200">
-              <h3 className="text-xl font-bold text-purple-800 mb-4 flex items-center gap-2">
-                ⚡ Быстрые действия
-              </h3>
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">⚡ Быстрые действия</h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <button
-                  onClick={handleWaterAll}
-                  disabled={!gameState?.farm?.some(cell => cell.plant && !cell.is_watered)}
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  onClick={() => setShowShop(true)}
+                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl hover:opacity-90 transition"
                 >
-                  💦 Полить все
+                  <span className="font-bold">🛒 Магазин семян</span>
+                  <span className="text-lg">→</span>
                 </button>
 
                 <button
-                  onClick={handleAddTestXP}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  onClick={() => setShowSell(true)}
+                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl hover:opacity-90 transition"
                 >
-                  <Star className="h-4 w-4" />
-                  +100 XP (тест)
+                  <span className="font-bold">💰 Продать урожай</span>
+                  <span className="text-lg">→</span>
+                </button>
+
+                <button
+                  onClick={handleRefreshGame}
+                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:opacity-90 transition"
+                >
+                  <span className="font-bold">🔄 Обновить игру</span>
+                  <span className="text-lg">↻</span>
                 </button>
               </div>
 
-              <div className="mt-4 p-3 bg-purple-100/50 rounded-xl">
-                <p className="text-purple-700 text-sm">
-                  💎 <strong>Совет:</strong> Выполняйте действия регулярно, чтобы быстрее повышать уровень и открывать новые возможности!
+              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                <p className="text-blue-700">
+                  💎 Совет: Выполняйте действия регулярно, чтобы быстрее повышать уровень и открывать новые возможности!
                 </p>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Статистика */}
-        <footer className="mt-8 pt-6 border-t border-green-200">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-700">
-                {gameState?.farm?.filter(cell => cell.plant).length || 0}
-              </div>
-              <div className="text-sm text-green-600">Растений</div>
-            </div>
+      {/* Модальные окна */}
+      {showShop && (
+        <ShopModal
+          plantsInfo={plantsInfo}
+          coins={gameState?.coins || 0}
+          onBuy={handleBuySeed}
+          onClose={() => setShowShop(false)}
+        />
+      )}
 
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-700">
-                {levelInfo?.current_level || 1}
-              </div>
-              <div className="text-sm text-green-600">Уровень</div>
-            </div>
+      {showSell && (
+        <SellModal
+          inventory={gameState?.harvest || {}}
+          plantsInfo={plantsInfo}
+          onSell={handleSellHarvest}
+          onClose={() => setShowSell(false)}
+        />
+      )}
 
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-700">
-                {levelInfo?.total_xp || 0}
-              </div>
-              <div className="text-sm text-green-600">Всего XP</div>
-            </div>
+      {levelUpData && (
+        <LevelUpModal
+          levelUpData={levelUpData}
+          onClose={closeLevelUpModal}
+        />
+      )}
 
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-700">
-                {availableHarvest.reduce((sum, h) => sum + h.count, 0)}
-              </div>
-              <div className="text-sm text-green-600">Урожая</div>
-            </div>
-          </div>
+      {/* UnlockedFeatures с проверкой на null */}
+      {levelInfo && levelInfo.unlocked_features && (
+        <UnlockedFeatures levelInfo={levelInfo} />
+      )}
 
-          <div className="text-center mt-6 text-green-600 text-sm">
-            <p>Farmers Dream © 2024 • Система уровней активна!</p>
-          </div>
-        </footer>
+      {/* Уведомления */}
+      <div className="fixed bottom-4 right-4 space-y-2 z-50">
+        <AnimatePresence>
+          {notifications.map((notification) => (
+            <motion.div
+              key={notification.id}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100 }}
+              className={`px-6 py-3 rounded-xl shadow-lg ${
+                notification.type === 'success' ? 'bg-green-500' :
+                notification.type === 'error' ? 'bg-red-500' :
+                'bg-blue-500'
+              } text-white font-medium`}
+            >
+              {notification.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -114,40 +114,43 @@ const GardenCarousel: React.FC<GardenCarouselProps> = ({
   const currentGardenData = GARDENS[currentGarden];
   const plantingZones = PLANTING_ZONES[currentGarden];
 
-  const handleDragStart = (event: React.TouchEvent | React.MouseEvent) => {
-    if ('touches' in event) {
-      setDragStartY(event.touches[0].clientY);
-    } else {
-      setDragStartY((event as React.MouseEvent).clientY);
+  const handleDragStart = (event: any) => {
+  let clientY: number;
+
+  if (event.type === 'touchstart') {
+    clientY = event.touches[0].clientY;
+  } else {
+    clientY = event.clientY;
+  }
+
+  setDragStartY(clientY);
+  setIsDragging(true);
+};
+
+const handleDragEnd = (event: any, info?: PanInfo) => {
+  setIsDragging(false);
+
+  let clientY: number;
+
+  if (event.type === 'touchend') {
+    clientY = event.changedTouches[0].clientY;
+  } else {
+    clientY = event.clientY;
+  }
+
+  const deltaY = clientY - dragStartY;
+  const threshold = 50;
+
+  if (Math.abs(deltaY) > threshold) {
+    if (deltaY > 0 && currentGarden > 0) {
+      setCurrentGarden(prev => prev - 1);
+    } else if (deltaY < 0 && currentGarden < GARDENS.length - 1) {
+      setCurrentGarden(prev => prev + 1);
     }
-    setIsDragging(true);
-  };
+  }
 
-  const handleDragEnd = (event: React.TouchEvent | React.MouseEvent, info?: PanInfo) => {
-    setIsDragging(false);
-
-    let endY;
-    if ('changedTouches' in event) {
-      endY = event.changedTouches[0].clientY;
-    } else {
-      endY = (event as React.MouseEvent).clientY;
-    }
-
-    const deltaY = endY - dragStartY;
-    const threshold = 50;
-
-    if (Math.abs(deltaY) > threshold) {
-      if (deltaY > 0 && currentGarden > 0) {
-        // Свайп вниз -> предыдущая грядка
-        setCurrentGarden(prev => prev - 1);
-      } else if (deltaY < 0 && currentGarden < GARDENS.length - 1) {
-        // Свайп вверх -> следующая грядка
-        setCurrentGarden(prev => prev + 1);
-      }
-    }
-
-    y.set(0);
-  };
+  y.set(0);
+};
 
   const handleSwipe = (direction: 'up' | 'down') => {
     if (direction === 'up' && currentGarden < GARDENS.length - 1) {

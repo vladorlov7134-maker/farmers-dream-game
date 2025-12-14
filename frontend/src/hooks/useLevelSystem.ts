@@ -45,11 +45,15 @@ export const useLevelSystem = (playerId: number) => {
         }
 
         setLevelUpData({
-          new_level: newLevel,
-          unlocked_plants: newUnlockedPlants,
-          reward_coins: 50 * newLevel,
-          reward_diamonds: Math.floor(newLevel / 2) * 5
-        });
+  old_level: data.old_level,
+  new_level: data.new_level,
+  rewards: {
+    coins: data.reward_coins || 0,
+    diamonds: data.reward_diamonds,
+    unlocked_plants: data.unlocked_plants,
+    unlocked_features: data.unlocked_features
+  }
+});
 
         return {
           ...prev,

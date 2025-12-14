@@ -333,14 +333,12 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
               className="mb-6 overflow-hidden"
             >
               <LevelProgress
-                levelInfo={currentLevelInfo}
-                onAddXP={addXP}
-                <LevelProgress
-  levelInfo={currentLevelInfo}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        levelInfo={currentLevelInfo}
+        onAddXP={addXP}
+      />
+    </motion.div>
+  )}
+</AnimatePresence>
 
         {/* Основной контент */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

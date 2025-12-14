@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gamepad2, Coins, Gem, Sprout, Star, Menu, X } from 'lucide-react';
-import GardenCarousel from './game/graphics/GardenCarousel';
+import Modern2DFarm from './game/graphics/Modern2DFarm';
 import LevelProgress from './components/LevelSystem/LevelProgress';
 import LevelUpModal from './components/LevelSystem/LevelUpModal';
 import UnlockedFeatures from './components/LevelSystem/UnlockedFeatures';
@@ -382,7 +382,7 @@ function App() {
                 </div>
               ) : (
                 <>
-                  <GardenCarousel
+                  <Modern2DFarm
   farm={(gameState?.farm || []) as any}
   onPlant={handlePlant}
   onHarvest={handleHarvest}

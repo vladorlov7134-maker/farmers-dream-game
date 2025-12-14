@@ -1,4 +1,4 @@
-// frontend/src/components/farm/Modern2DFarm.tsx
+// frontend/src/game/graphics/Modern2DFarm.tsx (ПОЛНЫЙ ФАЙЛ С ИСПРАВЛЕННЫМИ ТИПАМИ)
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,6 +15,19 @@ interface Plant {
     gardenId?: number;
   };
   gardenId?: number;
+}
+
+// Интерфейс для частиц
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  color: string;
+  size: number;
+  speedX: number;
+  speedY: number;
+  life: number;
+  type: 'plant' | 'harvest' | 'water';
 }
 
 interface Modern2DFarmProps {
@@ -263,7 +276,7 @@ const Modern2DFarm: React.FC<Modern2DFarmProps> = ({
 }) => {
   const [currentGarden, setCurrentGarden] = useState(0);
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
-  const [particles, setParticles] = useState<any[]>([]);
+  const [particles, setParticles] = useState<Particle[]>([]); // Исправлено: добавлен тип
   const [soilTextures, setSoilTextures] = useState<string[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -286,7 +299,7 @@ const Modern2DFarm: React.FC<Modern2DFarmProps> = ({
 
   // Создание частиц для эффектов
   const createParticles = useCallback((x: number, y: number, type: 'plant' | 'harvest' | 'water') => {
-    const newParticles = [];
+    const newParticles: Particle[] = []; // Исправлено: добавлен тип
     const count = type === 'harvest' ? 12 : 6;
     const color = type === 'water' ? '#3B82F6' : currentTheme.particleColor;
 

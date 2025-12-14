@@ -12,7 +12,7 @@ export const useLevelSystem = (playerId: number) => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_BASE}/api/levels/${playerId}`);
-      const levelData = response.data; // ИЗМЕНЕНО: добавлена переменная
+      const levelData = response.data;
 
       setLevelInfo({
         current_level: levelData.current_level,
@@ -61,35 +61,6 @@ export const useLevelSystem = (playerId: number) => {
     levelInfo,
     levelUpData,
     loading,
-    fetchLevelInfo,
-    addXP,
-    closeLevelUpModal
-  };
-};
-
-        return {
-          ...prev,
-          current_level: newLevel,
-          current_xp: remainingXP,
-          xp_to_next_level: Math.round(xpToNext * 1.5),
-          unlocked_plants: newUnlockedPlants
-        };
-      }
-
-      return {
-        ...prev,
-        current_xp: newXP
-      };
-    });
-  }, []);
-
-  const closeLevelUpModal = useCallback(() => {
-    setLevelUpData(null);
-  }, []);
-
-  return {
-    levelInfo,
-    levelUpData,
     fetchLevelInfo,
     addXP,
     closeLevelUpModal

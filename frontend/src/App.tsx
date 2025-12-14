@@ -192,19 +192,18 @@ function App() {
 
   // Сбор урожая
 const handleHarvest = async (plantId: string, position: { x: number; y: number }) => {
-  const result = await apiHarvestPlant(plantId);
-    if (result.success) {
-      if (result.xp) {
-        addXP(result.xp);
-        showXpAnimation(result.xp, position.y, position.x);
-      }
-      await fetchGameState();
-      showNotification('Урожай собран!', 'success');
-    } else {
-      showNotification(result.error || 'Ошибка сбора', 'error');
+  const result = await apiHarvestPlant(plantId, position); // Теперь передаем оба параметра
+  if (result.success) {
+    if (result.xp) {
+      addXP(result.xp);
+      showXpAnimation(result.xp, position.y, position.x);
     }
-  };
-
+    await fetchGameState();
+    showNotification('Урожай собран!', 'success');
+  } else {
+    showNotification(result.error || 'Ошибка сбора', 'error');
+  }
+};
   // Полив растения
   const handleWater = async (x: number, y: number) => {
     const result = await apiWaterPlant(x, y);

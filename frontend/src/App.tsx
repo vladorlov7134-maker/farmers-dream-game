@@ -208,7 +208,7 @@ function App() {
 
   // Полив растения
  const handleWater = async (plantId: string) => {
-  const result = await apiWaterPlant(0, 0); // ИЗМЕНЕНО: было (plantId)
+  const result = await apiWaterPlant(0, 0);
   if (result.success) {
     await fetchGameState();
     showNotification('Растение полито!', 'success');
@@ -383,12 +383,12 @@ function App() {
               ) : (
                 <>
                   <GardenCarousel
-      farm={(gameState?.farm || []) as any} // ИЗМЕНЕНО: добавлено as any
-      onPlant={handlePlant}
-      onHarvest={handleHarvest}
-      onWater={handleWater}
-      selectedSeed={selectedSeed}
-    />
+  farm={(gameState?.farm || []) as any}
+  onPlant={handlePlant}
+  onHarvest={handleHarvest}
+  onWater={handleWater}
+  selectedSeed={selectedSeed}
+/>
 
                   <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-xl">
                     <p className="text-green-700 flex items-start sm:items-center text-sm sm:text-base">

@@ -1,6 +1,6 @@
 // frontend/src/hooks/useGame.ts
 import { useState, useCallback } from 'react';
-import { GameState } from '../types/game.types';
+import { GameState, Plant } from '../types/game.types';
 import { API_BASE } from '../config';
 
 export const useGame = (playerId: number) => {
@@ -11,99 +11,165 @@ export const useGame = (playerId: number) => {
   const fetchGameState = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/game/state/${playerId}`);
-      if (!response.ok) throw new Error('Failed to fetch game state');
+      const response = await fetch(`${API_BASE}/api/game/${playerId}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
-      setGameState(data.game_state);
-      return data.game_state;
+      setGameState(data);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+      console.error('Error fetching game state:', err);
     } finally {
       setLoading(false);
     }
   }, [playerId]);
 
-  const plantSeed = useCallback(async (plantType: string, position: { x: number, y: number }) => {
+  const plantSeed = useCallback(async (seedType: string, position: { x: number; y: number; gardenId?: number }) => {
     try {
-      const response = await fetch(`${API_BASE}/api/game/plant`, {
+      const response = await fetch(`${API_BASE}/api/farm/plant`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          telegram_id: playerId,
-          plant_type: plantType,
+          playerId,
+          seedType,
           position
         })
       });
 
-      return await response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка посадки');
+      }
+
+      const data = await response.json();
+      return { success: true, data };
     } catch (err) {
-      return { success: false, error: 'Network error' };
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Ошибка посадки'
+      };
     }
   }, [playerId]);
 
   const harvestPlant = useCallback(async (plantId: string) => {
     try {
-      const response = await fetch(`${API_BASE}/api/game/harvest`, {
+      const response = await fetch(`${API_BASE}/api/farm/harvest`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ plantId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка сбора');
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+        xp: data.xp || 0
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Ошибка сбора'
+      };
+    }
+  }, []);
+
+  const waterPlant = useCallback(async (x: number, y: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/farm/water`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ x, y })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка полива');
+      }
+
+      const data = await response.json();
+      return { success: true, data };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Ошибка полива'
+      };
+    }
+  }, []);
+
+  const buySeed = useCallback(async (seedType: string, quantity: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/shop/buy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          telegram_id: playerId,
-          plant_id: plantId
+          playerId,
+          seedType,
+          quantity
         })
       });
-      return await response.json();
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка покупки');
+      }
+
+      const data = await response.json();
+      return { success: true, data };
     } catch (err) {
-      return { success: false, error: 'Network error' };
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Ошибка покупки'
+      };
     }
   }, [playerId]);
 
-  const waterPlant = async (plantId: string) => {
-  try {
-    const response = await axios.post(`${API_BASE}/api/farm/water`, {
-      plantId // Отправляем только plantId
-    });
-    return { success: true, data: response.data };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Ошибка полива'
-    };
-  }
-};
-
-  const buySeed = useCallback(async (plantType: string, amount: number) => {
+  const sellHarvest = useCallback(async (plantType: string, quantity: number) => {
     try {
-      const response = await fetch(`${API_BASE}/api/game/buy`, {
+      const response = await fetch(`${API_BASE}/api/shop/sell`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          telegram_id: playerId,
-          plant_type: plantType,
-          amount
+          playerId,
+          plantType,
+          quantity
         })
       });
-      return await response.json();
-    } catch (err) {
-      return { success: false, error: 'Network error' };
-    }
-  }, [playerId]);
 
-  const sellHarvest = useCallback(async (plantType: string, amount: number) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/game/sell`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegram_id: playerId,
-          plant_type: plantType,
-          amount
-        })
-      });
-      return await response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка продажи');
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+        xp: data.xp || 0
+      };
     } catch (err) {
-      return { success: false, error: 'Network error' };
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Ошибка продажи'
+      };
     }
   }, [playerId]);
 
@@ -111,7 +177,6 @@ export const useGame = (playerId: number) => {
     loading,
     error,
     gameState,
-    setGameState,
     fetchGameState,
     plantSeed,
     harvestPlant,

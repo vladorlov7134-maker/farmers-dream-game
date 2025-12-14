@@ -1,4 +1,3 @@
-// frontend/src/game/graphics/GardenCarousel.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import {
@@ -13,8 +12,12 @@ interface Plant {
   planted_at: string;
   last_watered: string;
   is_withered: boolean;
-  position: { x: number; y: number };
-  gardenId: number; // К какой грядке относится
+  position: {
+    x: number;
+    y: number;
+    gardenId?: number;
+  };
+  gardenId?: number;
 }
 
 interface GardenCarouselProps {
@@ -25,7 +28,6 @@ interface GardenCarouselProps {
   selectedSeed: string | null;
 }
 
-// Типы грядок
 const GARDENS = [
   {
     id: 0,
@@ -34,7 +36,7 @@ const GARDENS = [
     icon: "🥕",
     description: "Классические овощи",
     plants: ['carrot', 'tomato', 'cucumber'],
-    background: "bg-[url('https://images.unsplash.com/photo-1598301257982-0cf014dabbcd?auto=format&fit=crop&w=800')]",
+    background: "bg-gradient-to-br from-green-50 to-amber-50",
     effects: ["🐝", "🦋", "🌾"]
   },
   {
@@ -44,7 +46,7 @@ const GARDENS = [
     icon: "🍓",
     description: "Сладкие ягоды",
     plants: ['strawberry', 'berry', 'grape'],
-    background: "bg-[url('https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=800')]",
+    background: "bg-gradient-to-br from-pink-50 to-rose-50",
     effects: ["💎", "✨", "💧"]
   },
   {
@@ -54,7 +56,7 @@ const GARDENS = [
     icon: "🌸",
     description: "Декоративные цветы",
     plants: ['flower', 'sunflower', 'tulip'],
-    background: "bg-[url('https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=800')]",
+    background: "bg-gradient-to-br from-purple-50 to-fuchsia-50",
     effects: ["🦋", "🌈", "🌺"]
   },
   {
@@ -64,17 +66,16 @@ const GARDENS = [
     icon: "🌶️",
     description: "Тропические растения",
     plants: ['pumpkin', 'pepper', 'pineapple'],
-    background: "bg-[url('https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800')]",
+    background: "bg-gradient-to-br from-orange-50 to-red-50",
     effects: ["🦜", "🌴", "💦"]
   }
 ];
 
-// Зоны посадки на каждой грядке (не клетки, а свободные области)
 const PLANTING_ZONES = [
   // Грядка 1: Огород
   [
-    { x: 20, y: 30, width: 60, height: 40 }, // Основная зона
-    { x: 10, y: 75, width: 80, height: 20 }, // Нижняя полоса
+    { x: 20, y: 30, width: 60, height: 40 },
+    { x: 10, y: 75, width: 80, height: 20 },
   ],
   // Грядка 2: Ягоды
   [
@@ -104,53 +105,59 @@ const GardenCarousel: React.FC<GardenCarouselProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Для анимации свайпа
   const y = useMotionValue(0);
   const scale = useTransform(y, [-300, 0, 300], [0.9, 1, 0.9]);
   const opacity = useTransform(y, [-300, -100, 0, 100, 300], [0, 0.5, 1, 0.5, 0]);
 
-  // Растения текущей грядки
-  const currentGardenPlants = farm.filter(p => p.gardenId === currentGarden);
+  // Фильтруем растения для текущей грядки
+  const currentGardenPlants = farm.filter(p => {
+    const plantGardenId = p.gardenId || 0;
+    return plantGardenId === currentGarden;
+  }).map(p => ({
+    ...p,
+    gardenId: p.gardenId || 0
+  }));
+
   const currentGardenData = GARDENS[currentGarden];
   const plantingZones = PLANTING_ZONES[currentGarden];
 
   const handleDragStart = (event: any) => {
-  let clientY: number;
+    let clientY: number;
 
-  if (event.type === 'touchstart') {
-    clientY = event.touches[0].clientY;
-  } else {
-    clientY = event.clientY;
-  }
-
-  setDragStartY(clientY);
-  setIsDragging(true);
-};
-
-const handleDragEnd = (event: any, info?: PanInfo) => {
-  setIsDragging(false);
-
-  let clientY: number;
-
-  if (event.type === 'touchend') {
-    clientY = event.changedTouches[0].clientY;
-  } else {
-    clientY = event.clientY;
-  }
-
-  const deltaY = clientY - dragStartY;
-  const threshold = 50;
-
-  if (Math.abs(deltaY) > threshold) {
-    if (deltaY > 0 && currentGarden > 0) {
-      setCurrentGarden(prev => prev - 1);
-    } else if (deltaY < 0 && currentGarden < GARDENS.length - 1) {
-      setCurrentGarden(prev => prev + 1);
+    if (event.type === 'touchstart') {
+      clientY = event.touches[0].clientY;
+    } else {
+      clientY = event.clientY;
     }
-  }
 
-  y.set(0);
-};
+    setDragStartY(clientY);
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = (event: any, info?: PanInfo) => {
+    setIsDragging(false);
+
+    let clientY: number;
+
+    if (event.type === 'touchend') {
+      clientY = event.changedTouches[0].clientY;
+    } else {
+      clientY = event.clientY;
+    }
+
+    const deltaY = clientY - dragStartY;
+    const threshold = 50;
+
+    if (Math.abs(deltaY) > threshold) {
+      if (deltaY > 0 && currentGarden > 0) {
+        setCurrentGarden(prev => prev - 1);
+      } else if (deltaY < 0 && currentGarden < GARDENS.length - 1) {
+        setCurrentGarden(prev => prev + 1);
+      }
+    }
+
+    y.set(0);
+  };
 
   const handleSwipe = (direction: 'up' | 'down') => {
     if (direction === 'up' && currentGarden < GARDENS.length - 1) {
@@ -169,7 +176,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
     const x = ((event.clientX - rect.left) / rect.width) * 100;
     const y = ((event.clientY - rect.top) / rect.height) * 100;
 
-    // Проверяем, попадает ли клик в зону посадки
     const isInZone = plantingZones.some(zone =>
       x >= zone.x && x <= zone.x + zone.width &&
       y >= zone.y && y <= zone.y + zone.height
@@ -188,7 +194,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
     }
   };
 
-  // Эффекты для текущей грядки
   const renderGardenEffects = () => {
     return (
       <div className="absolute inset-0 pointer-events-none">
@@ -220,7 +225,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
 
   return (
     <div className="garden-carousel-container relative h-[500px] sm:h-[600px]">
-      {/* Индикатор грядок */}
       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 hidden sm:block">
         <div className="flex flex-col items-center space-y-2">
           {GARDENS.map((garden, idx) => (
@@ -233,7 +237,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
         </div>
       </div>
 
-      {/* Кнопки свайпа */}
       <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20">
         <button
           onClick={() => handleSwipe('up')}
@@ -251,7 +254,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
         </button>
       </div>
 
-      {/* Основной контейнер грядки */}
       <motion.div
         ref={containerRef}
         style={{ y, scale, opacity }}
@@ -260,18 +262,13 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
         dragElastic={0.1}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onTouchStart={handleDragStart}
-        onTouchEnd={handleDragEnd}
         className={`relative w-full h-full rounded-3xl overflow-hidden border-4 border-white/30 shadow-2xl ${currentGardenData.background} bg-cover bg-center`}
         onClick={handleGardenClick}
       >
-        {/* Градиентный оверлей */}
         <div className={`absolute inset-0 bg-gradient-to-b ${currentGardenData.bgColor} opacity-90`} />
 
-        {/* Эффекты грядки */}
         {renderGardenEffects()}
 
-        {/* Зоны посадки (визуальные границы) */}
         <div className="absolute inset-0">
           {plantingZones.map((zone, idx) => (
             <motion.div
@@ -290,7 +287,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
           ))}
         </div>
 
-        {/* Растения на грядке */}
         <div className="absolute inset-0">
           {currentGardenPlants.map((plant) => {
             const emoji =
@@ -335,7 +331,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
                     {plant.is_withered ? '🥀' : emoji}
                   </motion.span>
 
-                  {/* Индикаторы */}
                   {plant.is_withered && (
                     <motion.div
                       animate={{ scale: [1, 1.2, 1] }}
@@ -360,7 +355,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
           })}
         </div>
 
-        {/* Заголовок грядки */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
           <motion.div
             initial={{ y: -20 }}
@@ -375,7 +369,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
           </motion.div>
         </div>
 
-        {/* Подсказка свайпа (только на мобильных) */}
         <div className="sm:hidden absolute bottom-4 left-1/2 transform -translate-x-1/2">
           <motion.div
             animate={{ y: [0, 5, 0] }}
@@ -387,7 +380,6 @@ const handleDragEnd = (event: any, info?: PanInfo) => {
         </div>
       </motion.div>
 
-      {/* Панель информации */}
       <motion.div
         initial={{ y: 50 }}
         animate={{ y: 0 }}

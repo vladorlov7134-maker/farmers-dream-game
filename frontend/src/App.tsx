@@ -115,7 +115,7 @@ function App() {
       return;
     }
 
-    const result = await apiPlantSeed(row, col, selectedSeed);
+    const result = await apiPlantSeed({ row, col, seedType: selectedSeed });
     if (result.success) {
       await fetchGameState();
       setSelectedSeed(null);
@@ -127,7 +127,7 @@ function App() {
 
   // Сбор урожая
   const handleHarvestPlant = async (row: number, col: number) => {
-    const result = await apiHarvestPlant(row, col);
+    const result = await apiHarvestPlant({ row, col });
     if (result.success) {
       if (result.xp) {
         addXP(result.xp);
@@ -142,7 +142,7 @@ function App() {
 
   // Полив растения
   const handleWaterPlant = async (row: number, col: number) => {
-    const result = await apiWaterPlant(row, col);
+    const result = await apiWaterPlant({ row, col });
     if (result.success) {
       await fetchGameState();
       showNotification('Растение полито!', 'success');
@@ -197,7 +197,7 @@ function App() {
   };
 
   // Отображение инвентаря семян
-  const seedInventory = Object.entries(gameState?.seeds || {}).map(([type, count]) => ({
+  const seedInventory = Object.entries(gameState?.inventory?.seeds || {}).map(([type, count]) => ({
     type,
     count: count as number,
     name: PLANT_NAMES[type] || type,
@@ -232,17 +232,17 @@ function App() {
               className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:opacity-90 transition"
             >
               <Star className="w-5 h-5" />
-              <span className="font-bold">Уровень {levelInfo?.currentLevel || 1}</span>
+              <span className="font-bold">Уровень {levelInfo ? levelInfo.current_level : 1}</span>
             </button>
 
             <div className="flex items-center space-x-2 px-4 py-2 bg-amber-100 rounded-xl">
               <Coins className="w-5 h-5 text-amber-600" />
-              <span className="font-bold text-amber-800">{gameState?.coins || 0} монет</span>
+              <span className="font-bold text-amber-800">{gameState?.player?.coins || 0} монет</span>
             </div>
 
             <div className="flex items-center space-x-2 px-4 py-2 bg-purple-100 rounded-xl">
               <Gem className="w-5 h-5 text-purple-600" />
-              <span className="font-bold text-purple-800">{gameState?.gems || 0} кристаллов</span>
+              <span className="font-bold text-purple-800">{gameState?.player?.diamonds || 0} кристаллов</span>
             </div>
           </div>
         </div>
@@ -283,7 +283,6 @@ function App() {
                 <>
                   <SimpleFarmGrid
                     farm={gameState?.farm || []}
-                    onTileClick={handleTileClick}
                     plantsInfo={plantsInfo}
                   />
 
@@ -310,7 +309,7 @@ function App() {
                   <div>
                     <p className="font-bold text-gray-800">{PLANT_NAMES[selectedSeed] || selectedSeed}</p>
                     <p className="text-sm text-gray-600">
-                      В инвентаре: {gameState?.seeds?.[selectedSeed] || 0} шт.
+                      В инвентаре: {gameState?.inventory?.seeds?.[selectedSeed] || 0} шт.
                     </p>
                   </div>
                 </div>
@@ -404,8 +403,9 @@ function App() {
       {/* Модальные окна */}
       {showShop && (
         <ShopModal
+          unlockedPlants={levelInfo?.unlocked_plants || []}
           plantsInfo={plantsInfo}
-          coins={gameState?.coins || 0}
+          coins={gameState?.player?.coins || 0}
           onBuy={handleBuySeed}
           onClose={() => setShowShop(false)}
         />
@@ -413,7 +413,7 @@ function App() {
 
       {showSell && (
         <SellModal
-          inventory={gameState?.harvest || {}}
+          inventory={gameState?.inventory?.harvest || {}}
           plantsInfo={plantsInfo}
           onSell={handleSellHarvest}
           onClose={() => setShowSell(false)}
@@ -422,7 +422,7 @@ function App() {
 
       {levelUpData && (
         <LevelUpModal
-          levelUpData={levelUpData}
+          levelData={levelUpData}
           onClose={closeLevelUpModal}
         />
       )}

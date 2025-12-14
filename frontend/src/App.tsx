@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gamepad2, Coins, Gem, Sprout, Star, Menu, X } from 'lucide-react';
-import TopographicFarm from './game/graphics/TopographicFarm';
+import GardenCarousel from './game/graphics/GardenCarousel';
 import LevelProgress from './components/LevelSystem/LevelProgress';
 import LevelUpModal from './components/LevelSystem/LevelUpModal';
 import UnlockedFeatures from './components/LevelSystem/UnlockedFeatures';
@@ -175,29 +175,32 @@ function App() {
   }, []);
 
   // Посадка семени
-  const handlePlant = async (position: { x: number; y: number }) => {
-    if (!selectedSeed) {
-      showNotification('Выберите семя для посадки', 'error');
-      return;
-    }
+  const handlePlant = async (position: { x: number; y: number; gardenId: number }) => {
+  if (!selectedSeed) {
+    showNotification('Выберите семя для посадки', 'error');
+    return;
+  }
 
     const result = await apiPlantSeed(selectedSeed, position);
-    if (result.success) {
-      await fetchGameState();
-      setSelectedSeed(null);
-      showNotification('Семя посажено!', 'success');
-    } else {
-      showNotification(result.error || 'Ошибка посадки', 'error');
-    }
-  };
+  if (result.success) {
+    await fetchGameState();
+    setSelectedSeed(null);
+    showNotification('Семя посажено!', 'success');
+  } else {
+    showNotification(result.error || 'Ошибка посадки', 'error');
+  }
+};
 
   // Сбор урожая
-const handleHarvest = async (plantId: string, position: { x: number; y: number }) => {
+const handleHarvest = async (plantId: string) => {
+  const plant = farm.find(p => p.id === plantId);
+  if (!plant) return;
+
   const result = await apiHarvestPlant(plantId);
   if (result.success) {
     if (result.xp) {
       addXP(result.xp);
-      showXpAnimation(result.xp, position); // Исправлено: 2 аргумента вместо 3
+      showXpAnimation(result.xp, { x: 50, y: 50 }); // Центр экрана
     }
     await fetchGameState();
     showNotification('Урожай собран!', 'success');
@@ -206,15 +209,18 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
   }
 };
   // Полив растения
-  const handleWater = async (x: number, y: number) => {
-    const result = await apiWaterPlant(x, y);
-    if (result.success) {
-      await fetchGameState();
-      showNotification('Растение полито!', 'success');
-    } else {
-      showNotification(result.error || 'Ошибка полива', 'error');
-    }
-  };
+  const handleWater = async (plantId: string) => {
+  const plant = farm.find(p => p.id === plantId);
+  if (!plant) return;
+
+  const result = await apiWaterPlant(plant.position.x, plant.position.y);
+  if (result.success) {
+    await fetchGameState();
+    showNotification('Растение полито!', 'success');
+  } else {
+    showNotification(result.error || 'Ошибка полива', 'error');
+  }
+};
 
   // Покупка семян
   const handleBuySeed = async (seedType: string, quantity: number) => {
@@ -387,7 +393,7 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
                 </div>
               ) : (
                 <>
-                  <TopographicFarm
+                  <GardenCarousel
   farm={gameState?.farm || []}
   onPlant={handlePlant}
   onHarvest={handleHarvest}

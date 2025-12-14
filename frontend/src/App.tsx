@@ -387,14 +387,13 @@ const handleHarvest = async (plantId: string, position: { x: number; y: number }
                 </div>
               ) : (
                 <>
-                  <SimpleFarmGrid
-                    farm={gameState?.farm || []}
-                    onPlant={handlePlant}
-                    onHarvest={handleHarvest}
-                    onWater={handleWater}
-                    selectedSeed={selectedSeed}
-                  />
-
+                  <AnimatedFarmGrid
+  farm={gameState?.farm || []}
+  onPlant={handlePlant}
+  onHarvest={handleHarvest}
+  onWater={handleWater}
+  selectedSeed={selectedSeed}
+/>
                   <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-xl">
                     <p className="text-green-700 flex items-start sm:items-center text-sm sm:text-base">
                       <Sprout className="w-4 h-4 sm:w-5 sm:h-5 mr-2 mt-0.5 flex-shrink-0" />

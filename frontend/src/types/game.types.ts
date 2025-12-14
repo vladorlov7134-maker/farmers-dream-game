@@ -1,4 +1,12 @@
-// frontend/src/types/game.types.ts
+export interface PlantInfo {
+  type: string;
+  seed_price: number;
+  sell_price: number;
+  growth_time: number;
+  required_level: number;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic';
+  description: string;
+}
 
 export interface Plant {
   id: string;
@@ -7,7 +15,20 @@ export interface Plant {
   planted_at: string;
   last_watered: string;
   is_withered: boolean;
-  position: { x: number; y: number };
+  position: { 
+    x: number; 
+    y: number;
+    gardenId?: number;
+  };
+  gardenId?: number;
+}
+
+export interface Player {
+  id: number;
+  username: string;
+  coins: number;
+  diamonds: number;
+  last_active: string;
 }
 
 export interface Inventory {
@@ -15,13 +36,10 @@ export interface Inventory {
   harvest: Record<string, number>;
 }
 
-export interface Player {
-  id: number;
-  coins: number;
-  diamonds: number;
-  experience: number;
-  level: number;
-  created_at: string;
+export interface GameState {
+  farm: Plant[];
+  player: Player;
+  inventory: Inventory;
 }
 
 export interface LevelInfo {
@@ -30,55 +48,15 @@ export interface LevelInfo {
   xp_to_next_level: number;
   unlocked_plants: string[];
   unlocked_features: string[];
-  // Добавляем недостающие поля
-  next_level_xp?: number;
-  progress_percentage?: number;
-  next_level_rewards?: {
-    coins?: number;
-    diamonds?: number;
-    new_plants?: string[];
-  };
 }
 
 export interface LevelUpData {
+  old_level: number;
   new_level: number;
-  unlocked_plants?: string[];
-  unlocked_features?: string[];
-  reward_coins?: number;
-  reward_diamonds?: number;
-  // Добавляем недостающие поля
-  old_level?: number;
-  rewards?: {
-    coins?: number;
+  rewards: {
+    coins: number;
     diamonds?: number;
-    new_plants?: string[];
+    unlocked_plants?: string[];
+    unlocked_features?: string[];
   };
 }
-
-export interface PlantInfo {
-  type: string;
-  seed_price: number;
-  sell_price: number;
-  growth_time: number;
-  required_level: number;
-  rarity?: 'common' | 'uncommon' | 'rare' | 'epic';
-  description?: string;
-}
-
-export interface GameState {
-  player: Player;
-  farm: Plant[];
-  inventory: Inventory;
-  last_updated: string;
-}
-
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  xp?: number;
-  coins?: number;
-  diamonds?: number;
-}
-
-// ... остальные интерфейсы без изменений

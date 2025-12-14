@@ -192,38 +192,34 @@ function App() {
 };
 
   // Сбор урожая
-const handleHarvest = async (plantId: string) => {
-  const plant = farm.find(p => p.id === plantId);
-  if (!plant) return;
-
-  const result = await apiHarvestPlant(plantId);
-  if (result.success) {
-    if (result.xp) {
-      addXP(result.xp);
-      showXpAnimation(result.xp, { x: 50, y: 50 }); // Центр экрана
+  const handleHarvest = async (plantId: string) => {
+    const result = await apiHarvestPlant(plantId);
+    if (result.success) {
+      if (result.xp) {
+        addXP(result.xp);
+        showXpAnimation(result.xp, { x: 50, y: 50 });
+      }
+      await fetchGameState();
+      showNotification('Урожай собран!', 'success');
+    } else {
+      showNotification(result.error || 'Ошибка сбора', 'error');
     }
-    await fetchGameState();
-    showNotification('Урожай собран!', 'success');
-  } else {
-    showNotification(result.error || 'Ошибка сбора', 'error');
-  }
-};
+  };
+
   // Полив растения
   const handleWater = async (plantId: string) => {
-  const plant = farm.find(p => p.id === plantId);
-  if (!plant) return;
+    const result = await apiWaterPlant(plantId);
+    if (result.success) {
+      await fetchGameState();
+      showNotification('Растение полито!', 'success');
+    } else {
+      showNotification(result.error || 'Ошибка полива', 'error');
+    }
+  };
 
-  const result = await apiWaterPlant(plant.position.x, plant.position.y);
-  if (result.success) {
-    await fetchGameState();
-    showNotification('Растение полито!', 'success');
-  } else {
-    showNotification(result.error || 'Ошибка полива', 'error');
-  }
-};
 
   // Покупка семян
-  const handleBuySeed = async (seedType: string, quantity: number) => {
+   const handleBuySeed = async (seedType: string, quantity: number) => {
     console.log('Buying seed:', seedType, 'quantity:', quantity);
 
     const plant = plantsInfo.find(p => p.type === seedType);
@@ -254,8 +250,9 @@ const handleHarvest = async (plantId: string) => {
     }
   };
 
+
   // Продажа урожая
-  const handleSellHarvest = async (plantType: string, quantity: number) => {
+   const handleSellHarvest = async (plantType: string, quantity: number) => {
     const result = await apiSellHarvest(plantType, quantity);
     if (result.success) {
       if (result.xp) {
@@ -267,6 +264,7 @@ const handleHarvest = async (plantId: string) => {
       showNotification(result.error || 'Ошибка продажи', 'error');
     }
   };
+
 
   // Обновить игру
   const handleRefreshGame = async () => {
@@ -304,7 +302,6 @@ const handleHarvest = async (plantId: string) => {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4 sm:mb-6 p-3 sm:p-4 bg-white rounded-xl sm:rounded-2xl shadow-lg">
 
-          {/* Левая часть: Логотип и название + мобильное меню */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 sm:space-x-3">
               <Gamepad2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-green-600" />
@@ -313,7 +310,6 @@ const handleHarvest = async (plantId: string) => {
               </h1>
             </div>
 
-            {/* Мобильное меню кнопка (только на мобильных) */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="sm:hidden p-1.5 rounded-lg bg-gray-100"
@@ -326,10 +322,8 @@ const handleHarvest = async (plantId: string) => {
             </button>
           </div>
 
-          {/* Правая часть: Уровень и валюта (скрыто на мобильных в меню) */}
           <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} sm:flex flex-wrap gap-2 justify-end`}>
 
-            {/* Уровень */}
             <button
               onClick={() => {
                 setExpandedLevel(!expandedLevel);
@@ -341,7 +335,6 @@ const handleHarvest = async (plantId: string) => {
               <span className="font-bold text-sm sm:text-base">Ур. {currentLevelInfo.current_level}</span>
             </button>
 
-            {/* Монеты */}
             <div className="flex items-center space-x-1 sm:space-x-2 px-3 py-1.5 sm:px-3 sm:py-2 bg-amber-100 rounded-lg sm:rounded-xl w-full sm:w-auto justify-center">
               <Coins className="w-4 h-4 sm:w-4 sm:h-4 text-amber-600" />
               <span className="font-bold text-amber-800 text-sm sm:text-base whitespace-nowrap">
@@ -349,7 +342,6 @@ const handleHarvest = async (plantId: string) => {
               </span>
             </div>
 
-            {/* Кристаллы */}
             <div className="flex items-center space-x-1 sm:space-x-2 px-3 py-1.5 sm:px-3 sm:py-2 bg-purple-100 rounded-lg sm:rounded-xl w-full sm:w-auto justify-center">
               <Gem className="w-4 h-4 sm:w-4 sm:h-4 text-purple-600" />
               <span className="font-bold text-purple-800 text-sm sm:text-base whitespace-nowrap">
@@ -359,7 +351,6 @@ const handleHarvest = async (plantId: string) => {
           </div>
         </div>
 
-        {/* Уровень (расширяемый) */}
         <AnimatePresence>
           {expandedLevel && (
             <motion.div
@@ -376,13 +367,11 @@ const handleHarvest = async (plantId: string) => {
           )}
         </AnimatePresence>
 
-        {/* Основной контент */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Ферма */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Ваша ферма</h2>
-              <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">5x5 клеток для выращивания растений</p>
+              <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">4 уникальные грядки с растениями</p>
 
               {gameLoading ? (
                 <div className="flex justify-center items-center h-64 sm:h-96">
@@ -394,16 +383,17 @@ const handleHarvest = async (plantId: string) => {
               ) : (
                 <>
                   <GardenCarousel
-  farm={gameState?.farm || []}
-  onPlant={handlePlant}
-  onHarvest={handleHarvest}
-  onWater={handleWater}
-  selectedSeed={selectedSeed}
-/>
+                    farm={gameState?.farm || []}
+                    onPlant={handlePlant}
+                    onHarvest={handleHarvest}
+                    onWater={handleWater}
+                    selectedSeed={selectedSeed}
+                  />
+
                   <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-xl">
                     <p className="text-green-700 flex items-start sm:items-center text-sm sm:text-base">
                       <Sprout className="w-4 h-4 sm:w-5 sm:h-5 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>💡 Совет: Нажмите на пустую клетку, чтобы посадить выбранное семя. Собирайте урожай вовремя, чтобы получить больше XP!</span>
+                      <span>💡 Совет: Свайпайте вверх/вниз для смены грядки. Кликните в пунктирной зоне, чтобы посадить растение!</span>
                     </p>
                   </div>
                 </>
@@ -411,7 +401,7 @@ const handleHarvest = async (plantId: string) => {
             </div>
           </div>
 
-          {/* Боковая панель */}
+          {/* Боковая панель (без изменений) */}
           <div className="space-y-4 sm:space-y-6">
             {/* Выбранное семя */}
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
@@ -530,11 +520,11 @@ const handleHarvest = async (plantId: string) => {
         </div>
       </div>
 
-      {/* Модальные окна */}
+      {/* Модальные окна (без изменений) */}
       {showShop && (
         <ShopModal
           key="shop-modal"
-          unlockedPlants={['carrot', 'tomato', 'cucumber']} // Временно разблокируем растения
+          unlockedPlants={['carrot', 'tomato', 'cucumber']}
           plantsInfo={plantsInfo}
           coins={currentCoins}
           onBuy={handleBuySeed}
@@ -560,7 +550,6 @@ const handleHarvest = async (plantId: string) => {
         />
       )}
 
-      {/* UnlockedFeatures с проверкой на null */}
       {currentLevelInfo.unlocked_features && currentLevelInfo.unlocked_features.length > 0 && (
         <UnlockedFeatures
           key="unlocked-features"
